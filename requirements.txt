@@ -4,3 +4,4 @@ opencv-contrib-python
 wget
 dlib
 imutils
+scikit-learn
