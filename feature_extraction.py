@@ -124,6 +124,7 @@ class Featurizer():
         step = 1
         if(not os.path.isfile(self.data_dir + 'data.npy')):
             data = np.empty((0, self.n_features*size+1), dtype=np.float32)
+            medias = np.empty((0, self.n_features+1), dtype=np.float32)
             folds = [x for x in os.listdir('data/') if x.startswith('Fold')]
 
             for fold in folds:
@@ -137,14 +138,19 @@ class Featurizer():
                     dormido = features_p[part:]
                     vents_dormido, meds_dormido = self.serializer(dormido, 1, step, size)
                     data_p = np.append(vents_dormido, vents_atento, axis=0).squeeze()
+                    medias_p = np.append(meds_atento, meds_dormido, axis=0).squeeze()
                     data = np.append(data, data_p, axis=0)
+                    medias = np.append(medias, medias_p, axis=0)
             
             np.save(self.data_dir + 'data.npy', data)
+            np.save(self.data_dir + 'medias.npy', data)
+
         else:
             data = np.load(self.data_dir + 'data.npy', allow_pickle=True)
+            medias = np.load(self.data_dir + 'medias.npy', allow_pickle=True)
             assert data.shape[1] == self.n_features*size + 1
 
-        return data
+        return data, medias
     
     def serializer(self, X, y, step, size):
 
@@ -155,7 +161,7 @@ class Featurizer():
             ventana = X[i:i+size, :]
             medias_i = np.mean(ventana, axis=0)
             ventanas.append(np.concatenate((ventana.reshape(1, -1), [[y]]), axis=1))
-            medias.append(medias_i)
+            medias.append(np.concatenate((medias_i.reshape(1, -1), [[y]]), axis=1))
 
         ventanas = np.array(ventanas)
         medias = np.array(medias)
