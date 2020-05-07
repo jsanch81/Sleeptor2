@@ -47,7 +47,7 @@ class Featurizer():
             wget.download(url, hog_filename)
         self.predictor = dlib.shape_predictor(hog_filename)
         self.n_landmarks = 68
-        self.n_features = 4
+        self.n_features = 5
 
     def calculate_rotation(self, gray):
         rotations = [None, cv2.ROTATE_90_CLOCKWISE, cv2.ROTATE_180, cv2.ROTATE_90_COUNTERCLOCKWISE]
@@ -66,12 +66,12 @@ class Featurizer():
             for i in [0,1]:
                 cap = cv2.VideoCapture(self.data_dir + fold + '/' + person + '/' + str(i) + '.mp4')
                 sec = 0
-                frameRate = 1
+                frameRate = 0.1
                 success, image = getFrame(sec, cap)
                 count = 0
                 gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
                 rotation = self.calculate_rotation(gray)
-                while success and count < 360:
+                while success and count < 400:
                     if(rotation is not None):
                         gray = cv2.rotate(gray, rotation)
                     rects = self.detector(gray,0)
@@ -111,16 +111,19 @@ class Featurizer():
             reye = d[42:48]
             mouth = d[48:68]
             ear = (eye_aspect_ratio(leye) + eye_aspect_ratio(reye))/2
+            earl = eye_aspect_ratio(leye)
+            earr = eye_aspect_ratio(reye)
             mar = mouth_aspect_ratio(mouth)
             cir = (circularity(leye) + circularity(reye))/2
             mouth_eye = mar/ear
-            features = np.append(features, [[ear, mar, cir, mouth_eye]], axis=0)
+            features = np.append(features, [[earl, earr, mar, cir, mouth_eye]], axis=0)
         return features
 
     def run(self):
+        size = 10
+        step = 1
         if(not os.path.isfile(self.data_dir + 'data.npy')):
-            features = np.empty((0, self.n_features), dtype=np.float32)
-            labels = np.empty((0, 1), dtype=np.float32)
+            data = np.empty((0, self.n_features*size+1), dtype=np.float32)
             folds = [x for x in os.listdir('data/') if x.startswith('Fold')]
 
             for fold in folds:
@@ -128,17 +131,33 @@ class Featurizer():
                 for person in people:
                     landmarks_p, labels_p = self.extract(fold, person)
                     features_p = self.featurize(landmarks_p)
-                    features = np.append(features, features_p, axis=0)
-                    labels = np.append(labels, labels_p, axis=0)
+                    part = list(labels_p).index(1)
+                    atento = features_p[:part]
+                    vents_atento, meds_atento = self.serializer(atento, 0, step, size)
+                    dormido = features_p[part:]
+                    vents_dormido, meds_dormido = self.serializer(dormido, 1, step, size)
+                    data_p = np.append(vents_dormido, vents_atento, axis=0).squeeze()
+                    data = np.append(data, data_p, axis=0)
             
-            data = np.append(features, labels, axis=1)
             np.save(self.data_dir + 'data.npy', data)
         else:
             data = np.load(self.data_dir + 'data.npy', allow_pickle=True)
-            assert data.shape[1] == self.n_features + 1
-            features = data[:, :self.n_features]
-            labels = data[:, [-1]]
-        
-        labels = labels.astype(np.int32)
+            assert data.shape[1] == self.n_features*size + 1
 
-        return features, labels
+        return data
+    
+    def serializer(self, X, y, step, size):
+
+        ventanas = []
+        medias = []
+
+        for i in range(0, len(X)-size, step):
+            ventana = X[i:i+size, :]
+            medias_i = np.mean(ventana, axis=0)
+            ventanas.append(np.concatenate((ventana.reshape(1, -1), [[y]]), axis=1))
+            medias.append(medias_i)
+
+        ventanas = np.array(ventanas)
+        medias = np.array(medias)
+
+        return ventanas, medias

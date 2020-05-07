@@ -3,7 +3,9 @@ from model import Model
 
 def main():
     featurizer = Featurizer()
-    X,y = featurizer.run()
+    data = featurizer.run()
+    X = data[:, :-1]
+    y = data[:, [-1]]
     model = Model()
     model.train(X, y)
 
