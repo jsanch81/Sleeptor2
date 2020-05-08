@@ -71,7 +71,7 @@ class Featurizer():
                 count = 0
                 gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
                 rotation = self.calculate_rotation(gray)
-                while success and count < 400:
+                while success and count < 4000:
                     if(rotation is not None):
                         gray = cv2.rotate(gray, rotation)
                     rects = self.detector(gray,0)
