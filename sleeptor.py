@@ -7,6 +7,8 @@ class Sleeptor():
     def __init__(self, featurizer, modelo):
         self.featurizer = featurizer
         self.modelo = modelo.model
+        self.alerta_1 = cv2.imread('data/alertas/alerta.jpg')
+        self.alerta_2 = cv2.imread('data/alertas/alerta_2.jpg')
 
     def predict(self, data):
         result =  self.modelo.predict(data)
@@ -50,9 +52,9 @@ class Sleeptor():
                         result_string = self.predict(data)
                         cv2.putText(image,result_string, bottomLeftCornerOfText, font, fontScale, fontColor,lineType)
                         if(xl and (xl < 0.3 or xl > 0.7)):
-                            cv2.circle(image, upperLeftCorner, 5, (255,255,0), -1)
+                            image = self.alerta_1
                         if(xr and (xr < 0.3 or xr > 0.7)):
-                            cv2.circle(image, upperRightCorner, 5, (0,255,255), -1)
+                            image = self.alerta_1
                         ventana = ventana[1:]
 
                     for (x, y) in shape:
