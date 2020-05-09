@@ -82,7 +82,7 @@ class Featurizer():
                 count = 0
                 gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
                 rotation = self.calculate_rotation(gray)
-                while success and count < 4000:
+                while success and count < 3000:
                     if(rotation is not None):
                         gray = cv2.rotate(gray, rotation)
                     rects = self.detector(gray,0)
@@ -98,7 +98,7 @@ class Featurizer():
                         if(success):
                             gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
                     else:
-                        print("face not detected for fold: %s, person: %s, video:%d.mp4, at second: %.2f" % (fold, person, i, sec))
+                        print("face not detected for fold: %s, person: %s, video:%d.mp4, at second: %.1f" % (fold, person, i, sec))
                         sec = sec + frameRate
                         sec = round(sec, 2)
                         success, image = getFrame(sec, cap)

@@ -10,7 +10,7 @@ def main():
     #y = medias[:, [-1]]
     model = Model()
     model.train(X, y)
-    sleeptor = Sleeptor()
+    sleeptor = Sleeptor(featurizer, model)
     sleeptor.live()
 
 if __name__ == '__main__':

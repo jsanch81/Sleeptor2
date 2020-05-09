@@ -1,32 +1,16 @@
-from sklearn.neighbors import KNeighborsClassifier
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import accuracy_score
 from sklearn.metrics import confusion_matrix
 from sklearn import metrics
-from sklearn.model_selection import train_test_split
 import pickle
 import numpy as np
-from sklearn.svm import SVC
+import os
 
 def normalize(data):
     means = np.mean(data, axis=1)
     stds = np.std(data, axis=1)
     data_s = (data-means)/stds
     return data_s
-
-def calculate_best_k(X_train, X_test, y_train, y_test, ks):
-    best_k = 0
-    acc = 0.0
-    for k in ks:
-        neigh = KNeighborsClassifier(n_neighbors=k)
-        neigh.fit(X_train, y_train)
-        pred_KN = neigh.predict(X_test)
-        # pred_KN = average(pred_KN)
-        acc_k = accuracy_score(y_test, pred_KN)
-        if(acc_k > acc):
-            best_k = k
-            acc = acc_k
-    return best_k
 
 def balanced_split(X, y, train_size):
     # indcies de cada clase
@@ -57,26 +41,27 @@ def balanced_split(X, y, train_size):
 
 class Model():
     def train(self, X,y):
-        y = y.ravel()
+        model_filename = 'data/models/model.pkl'
 
-        X_train, X_test, y_train, y_test = balanced_split(X, y, 0.7)
+        if(os.path.isfile(model_filename)):
+            self.model = pickle.load(open(model_filename, 'rb'))
+        else:
+            y = y.ravel()
 
-        #best_k = calculate_best_k(X_train, X_test, y_train, y_test, range(1,10))
-        #self.model = KNeighborsClassifier(n_neighbors=best_k)
-        self.model = RandomForestClassifier()
-        # self.model = SVC(probability=True)
-        self.model.fit(X_train, y_train)
-        preds = self.model.predict(X_test)
-        acc = accuracy_score(y_test, preds)
-        # preds = average(preds)
-        probas = self.model.predict_proba(X_test)[:,1]
-        f1 = metrics.f1_score(y_test, preds)
-        roc = metrics.roc_auc_score(y_test, probas)
-        print(' acc: {}\n f1 score: {}\n roc_auc score: {}'.format(acc, f1, roc))
-        print('confusion matrix')
-        print(confusion_matrix(y_test, preds))
-        filename = 'data/models/knn.pkl'
-        pickle.dump(self.model, open(filename, 'wb'))
-        print(self.model.feature_importances_)
+            X_train, X_test, y_train, y_test = balanced_split(X, y, 0.7)
+
+            self.model = RandomForestClassifier()
+            self.model.fit(X_train, y_train)
+            pickle.dump(self.model, open(model_filename, 'wb'))
+
+            preds = self.model.predict(X_test)
+            acc = accuracy_score(y_test, preds)
+            probas = self.model.predict_proba(X_test)[:,1]
+            f1 = metrics.f1_score(y_test, preds)
+            roc = metrics.roc_auc_score(y_test, probas)
+
+            print(' acc: {}\n f1 score: {}\n roc_auc score: {}'.format(acc, f1, roc))
+            print('confusion matrix')
+            print(confusion_matrix(y_test, preds))
 
 
