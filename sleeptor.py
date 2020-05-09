@@ -1,6 +1,7 @@
 from imutils import face_utils
 import cv2
 import time
+import numpy as np
 
 class Sleeptor():
     def __init__(self, featurizer, modelo):
@@ -20,6 +21,8 @@ class Sleeptor():
         # opciones de texto de resultado
         font                   = cv2.FONT_HERSHEY_SIMPLEX
         bottomLeftCornerOfText = (10,400)
+        upperLeftCorner        = (10,10)
+        upperRightCorner       = (630, 10)
         fontScale              = 1
         fontColor              = (255,255,255)
         lineType               = 2
@@ -39,13 +42,17 @@ class Sleeptor():
                 for (i, rect) in enumerate(rects):
                     shape = self.featurizer.predictor(gray, rect)
                     shape = face_utils.shape_to_np(shape)
-                    features = self.featurizer.featurize([shape])
+                    features, xl, xr = self.featurizer.featurize([shape], [gray])
                     ventana.append(features)
                     if (len(ventana) == 10):
                         ventana_np = np.array(ventana)
                         data = ventana_np.reshape(1, -1)
                         result_string = self.predict(data)
                         cv2.putText(image,result_string, bottomLeftCornerOfText, font, fontScale, fontColor,lineType)
+                        if(xl and (xl < 0.3 or xl > 0.7)):
+                            cv2.circle(image, upperLeftCorner, 5, (255,255,0), -1)
+                        if(xr and (xr < 0.3 or xr > 0.7)):
+                            cv2.circle(image, upperRightCorner, 5, (0,255,255), -1)
                         ventana = ventana[1:]
 
                     for (x, y) in shape:
