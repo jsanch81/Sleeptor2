@@ -152,9 +152,9 @@ class Featurizer():
                     medias_p = np.append(meds_atento, meds_dormido, axis=0).squeeze()
                     data = np.append(data, data_p, axis=0)
                     medias = np.append(medias, medias_p, axis=0)
-            
+
             np.save(self.data_dir + 'data.npy', data)
-            np.save(self.data_dir + 'medias.npy', data)
+            np.save(self.data_dir + 'medias.npy', medias)
 
         else:
             data = np.load(self.data_dir + 'data.npy', allow_pickle=True)
@@ -162,7 +162,7 @@ class Featurizer():
             assert data.shape[1] == self.n_features*size + 1
 
         return data, medias
-    
+
     def serializer(self, X, y, step, size):
 
         ventanas = []
