@@ -6,6 +6,7 @@ from sklearn import metrics
 from sklearn.model_selection import train_test_split
 import pickle
 import numpy as np
+from sklearn.svm import SVC
 
 def normalize(data):
     means = np.mean(data, axis=1)
@@ -63,6 +64,7 @@ class Model():
         #best_k = calculate_best_k(X_train, X_test, y_train, y_test, range(1,10))
         #self.model = KNeighborsClassifier(n_neighbors=best_k)
         self.model = RandomForestClassifier()
+        # self.model = SVC(probability=True)
         self.model.fit(X_train, y_train)
         preds = self.model.predict(X_test)
         acc = accuracy_score(y_test, preds)
@@ -75,5 +77,6 @@ class Model():
         print(confusion_matrix(y_test, preds))
         filename = 'data/models/knn.pkl'
         pickle.dump(self.model, open(filename, 'wb'))
+        print(self.model.feature_importances_)
 
 

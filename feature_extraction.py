@@ -35,6 +35,17 @@ def getFrame(sec, cap):
     start = 0
     cap.set(cv2.CAP_PROP_POS_MSEC, start + sec*1000)
     hasFrames, image = cap.read()
+    limit = 640
+    if(hasFrames):
+        # mirar si alguna dimension es mayor al limite definido
+        if(image.shape[0] > limit or image.shape[1] > limit):
+            # encontrar la mayor dimension y reducirla al limite maximo definido.
+            if(image.shape[0] > image.shape[1]):
+                scaling_factor = image.shape[0]/limit
+            else:
+                scaling_factor = image.shape[1]/limit
+            # cambiar tamaño a la imagen de acuerdo al limtie definido
+            image = cv2.resize(image, (int(image.shape[1]/scaling_factor), int(image.shape[0]/scaling_factor)), interpolation = cv2.INTER_AREA)
     return hasFrames, image
 
 class Featurizer():
@@ -87,7 +98,7 @@ class Featurizer():
                         if(success):
                             gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
                     else:
-                        print("face not detected for fold: %s, person: %s, video:%d.mp4, at second: %.0f" % (fold, person, i, sec))
+                        print("face not detected for fold: %s, person: %s, video:%d.mp4, at second: %.2f" % (fold, person, i, sec))
                         sec = sec + frameRate
                         sec = round(sec, 2)
                         success, image = getFrame(sec, cap)
