@@ -29,7 +29,6 @@ class Sleeptor():
         fontColor              = (255,255,255)
         lineType               = 2
 
-        frame_rate = 10
         prev = 0
         cap = cv2.VideoCapture(0)
         ventana = []
@@ -37,7 +36,7 @@ class Sleeptor():
         while True:
             time_elapsed = time.time() - prev
             _, image = cap.read()
-            if time_elapsed > 1./frame_rate:
+            if time_elapsed > 1./self.featurizer.frame_rate:
                 prev = time.time()
                 gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
                 rects = self.featurizer.detector(image, 0)
@@ -46,7 +45,7 @@ class Sleeptor():
                     shape = face_utils.shape_to_np(shape)
                     features, xl, xr = self.featurizer.featurize([shape], [gray])
                     ventana.append(features)
-                    if (len(ventana) == 10):
+                    if (len(ventana) == self.featurizer.size):
                         ventana_np = np.array(ventana)
                         data = ventana_np.reshape(1, -1)
                         result_string = self.predict(data)
@@ -55,7 +54,7 @@ class Sleeptor():
                             image = self.alerta_1
                         if(xr and (xr < 0.3 or xr > 0.7)):
                             image = self.alerta_1
-                        ventana = ventana[1:]
+                        ventana = ventana[self.featurizer.step:]
 
                     for (x, y) in shape:
                         cv2.circle(image, (x, y), 2, (0, 255, 0), -1)

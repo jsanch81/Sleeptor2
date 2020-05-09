@@ -40,8 +40,12 @@ def balanced_split(X, y, train_size):
     return X_train, X_test, y_train, y_test
 
 class Model():
-    def train(self, X,y):
-        model_filename = 'data/models/model.pkl'
+    def __init__(self, n_features, mode):
+        self.n_features = n_features
+        self.mode = mode
+
+    def train(self, X, y):
+        model_filename = 'data/models/model_' + str(int(X.shape[1]/self.n_features)) + '_' + self.mode + '.pkl'
 
         if(os.path.isfile(model_filename)):
             self.model = pickle.load(open(model_filename, 'rb'))
