@@ -114,11 +114,11 @@ class Featurizer():
         self.n_landmarks = 68
         self.n_features = 5
         # cuantos frames de cada video se van a capturar
-        self.n_samples_per_video = 300
+        self.n_samples_per_video = 3000
         # cuantos frames por segundo se van a capturar
         self.frame_rate = 5
         # tamaño de la ventana deslizante
-        self.size = 150
+        self.size = 50
         # paso de la ventana deslizante
         self.step = 1
         assert self.n_samples_per_video > self.size + self.step
@@ -202,11 +202,13 @@ class Featurizer():
             assert data.shape[1] == self.n_landmarks + 1
             landmarks = data[:,:self.n_landmarks,:]
             labels = data[:,[-1], 0]
+            grays = None
         return landmarks, labels, grays
 
     def featurize(self, landmarks, grays):
         features = np.empty((0, self.n_features))
-        for ls_i, gray in zip(landmarks, grays):
+        objects = zip(landmarks, grays) if grays is not None else zip(landmarks, [0 for _ in range(len(landmarks))])
+        for ls_i, gray in objects:
             leye = ls_i[36:42]
             reye = ls_i[42:48]
             mouth = ls_i[48:68]
@@ -217,36 +219,40 @@ class Featurizer():
             cir = (circularity(leye) + circularity(reye))/2
             mouth_eye = mar/ear
 
-            # detectar posicion de la pupila
-            right_eye_coords = calculate_eye_coords(ls_i, 36,37,38,39,40,41)
-            left_eye_coords = calculate_eye_coords(ls_i, 42,43,44,45,46,47)
+            xl = None
+            xr = None
 
-            # distancias de la apertura de los ojos
-            d1 = np.linalg.norm((ls_i[37] - ls_i[41]), 2)
-            d2 = np.linalg.norm((ls_i[38] - ls_i[40]), 2)
-            d3 = np.linalg.norm((ls_i[43] - ls_i[47]), 2)
-            d4 = np.linalg.norm((ls_i[44] - ls_i[46]), 2)
+            if(grays is not None):
+                # detectar posicion de la pupila
+                right_eye_coords = calculate_eye_coords(ls_i, 36,37,38,39,40,41)
+                left_eye_coords = calculate_eye_coords(ls_i, 42,43,44,45,46,47)
 
-            # umbral para definir color blanco de los ojos
-            threshold = calculate_threshold(gray, ls_i, d1, d2, d3, d4)
-    
-            # ubicar pupila izquierda
-            keypoints = self.process_eye(gray, left_eye_coords, threshold)
-            if(len(keypoints) > 0):
-                xl = keypoints[0].pt[0]/left_eye_coords[2]
-                yl = keypoints[0].pt[1]/left_eye_coords[3]
-            else:
-                xl = None
-                yl = None
-            
-            # ubicar pupila derecha
-            keypoints = self.process_eye(gray, right_eye_coords, threshold)
-            if(len(keypoints) > 0):
-                xr = keypoints[0].pt[0]/right_eye_coords[2]
-                yr = keypoints[0].pt[1]/right_eye_coords[3]
-            else:
-                xr = None
-                yr = None
+                # distancias de la apertura de los ojos
+                d1 = np.linalg.norm((ls_i[37] - ls_i[41]), 2)
+                d2 = np.linalg.norm((ls_i[38] - ls_i[40]), 2)
+                d3 = np.linalg.norm((ls_i[43] - ls_i[47]), 2)
+                d4 = np.linalg.norm((ls_i[44] - ls_i[46]), 2)
+
+                # umbral para definir color blanco de los ojos
+                threshold = calculate_threshold(gray, ls_i, d1, d2, d3, d4)
+        
+                # ubicar pupila izquierda
+                keypoints = self.process_eye(gray, left_eye_coords, threshold)
+                if(len(keypoints) > 0):
+                    xl = keypoints[0].pt[0]/left_eye_coords[2]
+                    yl = keypoints[0].pt[1]/left_eye_coords[3]
+                else:
+                    xl = None
+                    yl = None
+                
+                # ubicar pupila derecha
+                keypoints = self.process_eye(gray, right_eye_coords, threshold)
+                if(len(keypoints) > 0):
+                    xr = keypoints[0].pt[0]/right_eye_coords[2]
+                    yr = keypoints[0].pt[1]/right_eye_coords[3]
+                else:
+                    xr = None
+                    yr = None
 
             features = np.append(features, [[earl, earr, mar, cir, mouth_eye]], axis=0)
         return features, xl, xr

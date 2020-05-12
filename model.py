@@ -12,47 +12,31 @@ def normalize(data):
     data_s = (data-means)/stds
     return data_s
 
-def balanced_split(X, y, train_size):
-    # indcies de cada clase
-    idxs_0 = np.where(y==0)[0]
-    idxs_1 = np.where(y==1)[0]
-
-    # desordenar indices
-    np.random.shuffle(idxs_0)
-    np.random.shuffle(idxs_1)
-
-    # separar cada clase en train y test
-    wall = int(min(len(idxs_0), len(idxs_1))*train_size)
-
-    idxs_0_train = idxs_0[:wall]
-    idxs_1_train = idxs_1[:wall]
-    idxs_0_test = idxs_0[wall:]
-    idxs_1_test = idxs_1[wall:]
-
-    idxs_train = np.append(idxs_0_train, idxs_1_train, axis=0)
-    idxs_test = np.append(idxs_0_test, idxs_1_test, axis=0)
-
-    X_train = X[idxs_train]
-    X_test = X[idxs_test]
-    y_train = y[idxs_train]
-    y_test = y[idxs_test]
-
-    return X_train, X_test, y_train, y_test
 
 class Model():
-    def __init__(self, n_features, mode):
+    def __init__(self, n_features, mode, size, n_samples):
         self.n_features = n_features
         self.mode = mode
+        self.size = size
+        self.n_samples = n_samples
+
+    def balanced_split(self, X, y, train_size):
+        X_train = X[:-2*self.n_samples]
+        y_train = y[:-2*self.n_samples]
+        X_test = X[-2*self.n_samples:]
+        y_test = y[-2*self.n_samples:]
+
+        return X_train, X_test, y_train, y_test
 
     def train(self, X, y):
-        model_filename = 'data/models/model_' + str(int(X.shape[1]/self.n_features)) + '_' + self.mode + '.pkl'
+        model_filename = 'data/models/model_' + str(self.n_features) + '_' + str(self.size) + '_' + str(len(X)) + '_' + self.mode + '.pkl'
 
         if(os.path.isfile(model_filename)):
             self.model = pickle.load(open(model_filename, 'rb'))
         else:
             y = y.ravel()
 
-            X_train, X_test, y_train, y_test = balanced_split(X, y, 0.7)
+            X_train, X_test, y_train, y_test = self.balanced_split(X, y, 0.7)
 
             self.model = RandomForestClassifier()
             self.model.fit(X_train, y_train)

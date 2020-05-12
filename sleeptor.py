@@ -19,7 +19,7 @@ class Sleeptor():
 
         return result_string
 
-    def live(self):
+    def live(self, mode):
         # opciones de texto de resultado
         font                   = cv2.FONT_HERSHEY_SIMPLEX
         bottomLeftCornerOfText = (10,400)
@@ -47,7 +47,10 @@ class Sleeptor():
                     ventana.append(features)
                     if (len(ventana) == self.featurizer.size):
                         ventana_np = np.array(ventana)
-                        data = ventana_np.reshape(1, -1)
+                        if(mode=='medias'):
+                            data = np.mean(ventana_np, axis=0)
+                        elif(mode=='concat'):
+                            data = ventana_np.reshape(1, -1)
                         result_string = self.predict(data)
                         cv2.putText(image,result_string, bottomLeftCornerOfText, font, fontScale, fontColor,lineType)
                         if(xl and (xl < 0.3 or xl > 0.7)):

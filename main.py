@@ -7,7 +7,7 @@ def main():
     # mode = 'concat'
     mode = 'medias'
 
-    model = Model(featurizer.n_features, mode)
+    model = Model(featurizer.n_features, mode, featurizer.size, featurizer.n_samples_per_video)
     if(mode == 'concat'):
         X = data[:, :-1]
         y = data[:, [-1]]
@@ -18,7 +18,7 @@ def main():
         model.train(X, y)
 
     sleeptor = Sleeptor(featurizer, model)
-    sleeptor.live()
+    sleeptor.live(mode)
 
 if __name__ == '__main__':
     main()
