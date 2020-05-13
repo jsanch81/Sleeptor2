@@ -6,99 +6,7 @@ import os
 import wget
 import multiprocessing as mp
 from functools import partial
-
-def eye_aspect_ratio(eye):
-    A = np.linalg.norm((eye[1] - eye[5]),2)
-    B = np.linalg.norm((eye[2] - eye[4]),2)
-    C = np.linalg.norm((eye[0] - eye[3]),2)
-    ear = (A + B) / (2.0 * C)
-    return ear
-
-def mouth_aspect_ratio(mouth):
-    A = np.linalg.norm((mouth[14] - mouth[18]),2)
-    C = np.linalg.norm((mouth[12] - mouth[16]),2)
-    mar = (A ) / (C)
-    return mar
-
-def circularity(eye):
-    A = np.linalg.norm((eye[1] - eye[4]),2)
-    radius  = A/2.0
-    Area = np.pi * (radius ** 2)
-    p = 0
-    p += np.linalg.norm((eye[0] - eye[1]),2)
-    p += np.linalg.norm((eye[1] - eye[2]),2)
-    p += np.linalg.norm((eye[2] - eye[3]),2)
-    p += np.linalg.norm((eye[3] - eye[4]),2)
-    p += np.linalg.norm((eye[4] - eye[5]),2)
-    p += np.linalg.norm((eye[5] - eye[0]),2)
-    return 4 * np.pi * Area /(p**2)
-
-def calculate_threshold(gray, ls, d1, d2, d3, d4):
-        """
-        Function that calculate the color of the white part of the eye. It calculates the minimum between the left and right white part of each eye.
-        :param gray: gray image
-        :param ls: list of landmarks
-        Parameters d1 to d4 are the distance between the upper and the lower landmarks of the eye.
-        :return threshold: threshold for binarizing image.
-        """
-        
-        x1 = int((ls[36][0] + (ls[37][0] + ls[41][0])/2)/2)
-        y1 = ls[36][1]
-        t1 = gray[y1,x1]
-        
-        x2 = int((ls[39][0] + (ls[38][0] + ls[40][0])/2)/2)
-        y2 = ls[39][1]
-        t2 = gray[y2, x2]
-        
-        # takes the lowest if the difference is no longer that 10% else takes the highest.
-        p1 = min(t1,t2) if (min(t1,t2) >= max(t1,t2)*0.9) else max(t1,t2)
-
-        x3 = int((ls[42][0] + (ls[43][0] + ls[47][0])/2)/2)
-        y3 = ls[42][1]
-        t3 = gray[y3,x3]
-        
-        x4 = int((ls[45][0] + (ls[44][0] + ls[46][0])/2)/2)
-        y4 = ls[45][1]
-        t4 = gray[y4, x4]
-
-        # takes the lowest if the difference is no longer that 10% else takes the highest.
-        p2 = min(t3,t4) if (min(t3,t4) >= max(t3,t4)*0.9) else max(t3,t4)
-
-        return int(min(p1,p2)*0.8)
-
-def getFrame(sec, cap):
-    start = 0
-    cap.set(cv2.CAP_PROP_POS_MSEC, start + sec*1000)
-    hasFrames, image = cap.read()
-    limit = 640
-    if(hasFrames):
-        # mirar si alguna dimension es mayor al limite definido
-        if(image.shape[0] > limit or image.shape[1] > limit):
-            # encontrar la mayor dimension y reducirla al limite maximo definido.
-            if(image.shape[0] > image.shape[1]):
-                scaling_factor = image.shape[0]/limit
-            else:
-                scaling_factor = image.shape[1]/limit
-            # cambiar tamaño a la imagen de acuerdo al limtie definido
-            image = cv2.resize(image, (int(image.shape[1]/scaling_factor), int(image.shape[0]/scaling_factor)), interpolation = cv2.INTER_AREA)
-    return hasFrames, image
-
-
-def calculate_eye_coords(ls, a,b,c,d,e,f):
-    """
-    Function that calculates the rectangle where the eye is located.
-    :param ls: list of landmarks
-    Params a to f are the number of the landmark of each eye, a is the left corner of the eye and they are clockwise ordered. 
-    Then b is the upper left landmark, c the upper right and so on. d is the right corner of the eye.
-    :return [x,y,w,h]
-    """
-    w = ls[d][0]-ls[a][0]
-    h = (ls[e][1]+ls[f][1])/2.0 - (ls[b][1]+ls[c][1])/2.0
-    x = ls[a][0] - w*0.4
-    y = (ls[b][1]+ls[c][1])/2.0 - h
-    w *= 1.8
-    h *= 3.0
-    return [int(x),int(y),int(w),int(h)]
+from utils import eye_aspect_ratio, mouth_aspect_ratio, circularity, calculate_threshold, get_frame, calculate_eye_coords, get_useful_triangles, get_cosines
 
 class Featurizer():
     def __init__(self):
@@ -114,7 +22,7 @@ class Featurizer():
         detector_params.maxArea = 1500 # Because no pupil has area bigger than 1500 pixels
         self.blob_detector = cv2.SimpleBlobDetector_create(detector_params)
         self.n_landmarks = 68
-        self.n_features = 5
+        self.n_features = 5 + 54 # 3 cosines for each one of the 18 relevant triangles in face = 54
         # cuantos frames de cada video se van a capturar
         self.n_samples_per_video = 3000
         # cuantos frames por segundo se van a capturar
@@ -168,7 +76,7 @@ class Featurizer():
                 cap = cv2.VideoCapture(self.data_dir + fold + '/' + person + '/' + str(i) + '.mp4')
                 sec = 0
                 step = 1.0/self.frame_rate
-                success, image = getFrame(sec, cap)
+                success, image = get_frame(sec, cap)
                 count = 0
                 gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
                 rotation = self.calculate_rotation(gray)
@@ -185,14 +93,14 @@ class Featurizer():
                         labels.append([float(i)])
                         sec = sec + step
                         sec = round(sec, 2)
-                        success, image = getFrame(sec, cap)
+                        success, image = get_frame(sec, cap)
                         if(success):
                             gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
                     else:
                         print("face not detected for fold: %s, person: %s, video:%d.mp4, at second: %.1f" % (fold, person, i, sec))
                         sec = sec + step
                         sec = round(sec, 2)
-                        success, image = getFrame(sec, cap)
+                        success, image = get_frame(sec, cap)
                         if(success):
                             gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
             landmarks = np.array(landmarks)
@@ -223,6 +131,12 @@ class Featurizer():
 
             xl = None
             xr = None
+
+            triangles = get_useful_triangles(ls_i)
+            cosines = []
+            for triangle in triangles:
+                tmp = get_cosines(triangle)
+                cosines.extend(tmp)
 
             if(grays is not None):
                 # detectar posicion de la pupila
@@ -256,7 +170,7 @@ class Featurizer():
                     xr = None
                     yr = None
 
-            features = np.append(features, [[earl, earr, mar, cir, mouth_eye]], axis=0)
+            features = np.append(features, [[earl, earr, mar, cir, mouth_eye].extend(cosines)], axis=0)
         return features, xl, xr
 
     def run(self):
