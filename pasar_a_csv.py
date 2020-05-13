@@ -1,9 +1,9 @@
 import numpy as np
 import pandas as pd
 
-size = 150
+size = 50
 step = 1
-n_samples = 300
+n_samples = 3000
 
 # pasar data
 data = np.load('data/data_' + str(size) + '_' + str(step) + '_' + str(n_samples) + '.npy', allow_pickle=True)

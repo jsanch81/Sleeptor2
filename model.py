@@ -1,5 +1,6 @@
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.linear_model import LogisticRegression
+from sklearn.svm import SVC
 from sklearn.metrics import accuracy_score
 from sklearn.metrics import confusion_matrix
 from sklearn import metrics
@@ -50,12 +51,12 @@ class Model():
             self.model.fit(X_train, y_train)
             pickle.dump(self.model, open(model_filename, 'wb'))
 
-            preds = self.model.predict(X_test)
-            acc = accuracy_score(y_test, preds)
-            probas = self.model.predict_proba(X_test)[:,1]
-            f1 = metrics.f1_score(y_test, preds)
-            roc = metrics.roc_auc_score(y_test, probas)
+        preds = self.model.predict(X_test)
+        acc = accuracy_score(y_test, preds)
+        probas = self.model.predict_proba(X_test)[:,1]
+        f1 = metrics.f1_score(y_test, preds)
+        roc = metrics.roc_auc_score(y_test, probas)
 
-            print(' acc: {}\n f1 score: {}\n roc_auc score: {}'.format(acc, f1, roc))
-            print('confusion matrix')
-            print(confusion_matrix(y_test, preds))
+        print(' acc: {}\n f1 score: {}\n roc_auc score: {}'.format(acc, f1, roc))
+        print('confusion matrix')
+        print(confusion_matrix(y_test, preds))
