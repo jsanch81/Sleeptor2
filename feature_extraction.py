@@ -4,6 +4,8 @@ import cv2
 import numpy as np
 import os
 import wget
+import multiprocessing as mp
+from functools import partial
 
 def eye_aspect_ratio(eye):
     A = np.linalg.norm((eye[1] - eye[5]),2)
@@ -118,7 +120,7 @@ class Featurizer():
         # cuantos frames por segundo se van a capturar
         self.frame_rate = 5
         # tamaño de la ventana deslizante
-        self.size = 50
+        self.size = 100
         # paso de la ventana deslizante
         self.step = 1
         assert self.n_samples_per_video > self.size + self.step
@@ -261,6 +263,8 @@ class Featurizer():
         data_filename = self.data_dir + 'data_' + str(self.size) + '_' + str(self.step) + '_' + str(self.n_samples_per_video) + '.npy'
         medias_filename = self.data_dir + 'medias_' + str(self.size) + '_' + str(self.step) + '_' + str(self.n_samples_per_video) + '.npy'
         if(not os.path.isfile(data_filename)):
+            del self.blob_detector
+
             data = np.empty((0, self.n_features*self.size+1), dtype=np.float32)
             medias = np.empty((0, self.n_features+1), dtype=np.float32)
             folds = [x for x in os.listdir('data/') if x.startswith('Fold') and not '.zip' in x]
@@ -268,21 +272,24 @@ class Featurizer():
             for fold in folds:
                 banned = ['07', '08', '13', '14', '33', '49', '51', '58']
                 people = [x for x in os.listdir('data/'+fold) if x.isnumeric() and not x in banned]
-                for person in people:
-                    landmarks_p, labels_p, grays = self.extract(fold, person)
-                    features_p, _, _ = self.featurize(landmarks_p, None)
-                    part = list(labels_p).index(1)
-                    atento = features_p[:part]
-                    vents_atento, meds_atento = self.serializer(atento, 0)
-                    dormido = features_p[part:]
-                    vents_dormido, meds_dormido = self.serializer(dormido, 1)
-                    data_p = np.append(vents_dormido, vents_atento, axis=0).squeeze()
-                    medias_p = np.append(meds_atento, meds_dormido, axis=0).squeeze()
+                part = partial(self.extract_person, fold)
+
+                pool = mp.Pool(min(6, mp.cpu_count()-3))
+                results = list(pool.imap(part, [person for person in people]))
+                pool.close()
+                    
+                
+                for data_p, medias_p in results:
                     data = np.append(data, data_p, axis=0)
                     medias = np.append(medias, medias_p, axis=0)
 
             np.save(data_filename, data)
             np.save(medias_filename, medias)
+
+            detector_params = cv2.SimpleBlobDetector_Params()
+            detector_params.filterByArea = True
+            detector_params.maxArea = 1500 # Because no pupil has area bigger than 1500 pixels
+            self.blob_detector = cv2.SimpleBlobDetector_create(detector_params)
 
         else:
             data = np.load(data_filename, allow_pickle=True)
@@ -290,6 +297,19 @@ class Featurizer():
             assert data.shape[1] == self.n_features*self.size + 1
 
         return data, medias
+
+    def extract_person(self, fold, person):
+        landmarks_p, labels_p, grays = self.extract(fold, person)
+        features_p, _, _ = self.featurize(landmarks_p, None)
+        part = list(labels_p).index(1)
+        atento = features_p[:part]
+        vents_atento, meds_atento = self.serializer(atento, 0)
+        dormido = features_p[part:]
+        vents_dormido, meds_dormido = self.serializer(dormido, 1)
+        data_p = np.append(vents_dormido, vents_atento, axis=0).squeeze()
+        medias_p = np.append(meds_atento, meds_dormido, axis=0).squeeze()
+        
+        return [data_p, medias_p]
 
     def serializer(self, X, y):
 
