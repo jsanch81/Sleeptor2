@@ -37,7 +37,7 @@ def circularity(eye):
  class Sleeptor():
 
     def __init__(self):
-        self.model = pickle.load('data/models/knn.pkl');
+        self.knn = pickle.load('data/models/knn.pkl');
         self.data = []
         self.n_features = 5
 
@@ -97,7 +97,7 @@ def circularity(eye):
     #     return df_means,df_std
 
     def model(self, data):
-        Result =  self.modelo.predict(df)
+        Result =  self.knn.predict(data)
         if Result == 1:
             Result_String = "Drowsy"
         else:
