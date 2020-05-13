@@ -127,7 +127,7 @@ class Featurizer():
         rotations = [None, cv2.ROTATE_90_CLOCKWISE, cv2.ROTATE_180, cv2.ROTATE_90_COUNTERCLOCKWISE]
         rects = self.detector(gray,0)
         cont = 0
-        while len(rects) < 1 and cont < len(rotations):
+        while len(rects) < 1 and cont < len(rotations)-1:
             cont += 1
             gray = cv2.rotate(gray, rotations[cont])
             rects = self.detector(gray,0)
@@ -207,7 +207,7 @@ class Featurizer():
 
     def featurize(self, landmarks, grays):
         features = np.empty((0, self.n_features))
-        objects = zip(landmarks, grays) if grays is not None else zip(landmarks, [0 for _ in range(len(landmarks))])
+        objects = zip(landmarks, grays) if grays is not None and len(grays) > 0 else zip(landmarks, [0 for _ in range(len(landmarks))])
         for ls_i, gray in objects:
             leye = ls_i[36:42]
             reye = ls_i[42:48]
@@ -263,13 +263,14 @@ class Featurizer():
         if(not os.path.isfile(data_filename)):
             data = np.empty((0, self.n_features*self.size+1), dtype=np.float32)
             medias = np.empty((0, self.n_features+1), dtype=np.float32)
-            folds = [x for x in os.listdir('data/') if x.startswith('Fold')]
+            folds = [x for x in os.listdir('data/') if x.startswith('Fold') and not '.zip' in x]
 
             for fold in folds:
-                people = [x for x in os.listdir('data/'+fold) if x.isnumeric()]
+                banned = ['07', '08', '13', '14', '33', '49', '51', '58']
+                people = [x for x in os.listdir('data/'+fold) if x.isnumeric() and not x in banned]
                 for person in people:
                     landmarks_p, labels_p, grays = self.extract(fold, person)
-                    features_p, _, _ = self.featurize(landmarks_p, grays)
+                    features_p, _, _ = self.featurize(landmarks_p, None)
                     part = list(labels_p).index(1)
                     atento = features_p[:part]
                     vents_atento, meds_atento = self.serializer(atento, 0)
