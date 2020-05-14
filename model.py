@@ -21,7 +21,7 @@ class Model():
         self.size = size
         self.n_samples = n_samples
 
-    def balanced_split(self, X):
+    def balanced_split(self, X, y):
         X_train = X[:-2*self.n_samples]
         y_train = y[:-2*self.n_samples]
         X_test = X[-2*self.n_samples:]

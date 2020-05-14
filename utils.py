@@ -102,22 +102,37 @@ def lengthSquare(X, Y):
     yDiff = X[1] - Y[1]  
     return xDiff * xDiff + yDiff * yDiff 
       
-def get_cosines(A, B, C):  
+def get_cosines(A, B, C):
+    if(A[0] == B[0] and A[1] == B[1]):
+        if(B[0]+1 == C[0] and B[1]==C[1]):
+            B[0] = B[0] + 2
+        else:
+            B[0] = B[0] + 2
+    if(C[0] == B[0] and C[1] == B[1]):
+        if(B[0]+1==A[0] and B[1]==A[1]):
+            B[0] = B[0] + 2
+        else:
+            B[0] = B[0] + 1
+    if(A[0] == C[0] and A[1] == C[1]):
+        if(C[0]+1 == B[0] and C[1]==B[1]):
+            C[0] = C[0] + 2
+        else:
+            C[0] = C[0] + 1
       
-    # Square of lengths be a2, b2, c2  
+    # Square of lengths be a2, b2, c2
     a2 = lengthSquare(B, C)  
     b2 = lengthSquare(A, C)  
     c2 = lengthSquare(A, B)  
   
-    # length of sides be a, b, c  
+    # length of sides be a, b, c
     a = math.sqrt(a2);  
     b = math.sqrt(b2);  
     c = math.sqrt(c2);  
   
-    # From Cosine law  
-    alpha = math.acos((b2 + c2 - a2) / (2 * b * c))
-    betta = math.acos((a2 + c2 - b2) / (2 * a * c)) 
-    gamma = math.acos((a2 + b2 - c2) / (2 * a * b)) 
+    # From Cosine law
+    alpha = math.acos(min(max((b2 + c2 - a2) / (2 * b * c), -1),1))
+    betta = math.acos(min(max((a2 + c2 - b2) / (2 * a * c), -1),1))
+    gamma = math.acos(min(max((a2 + b2 - c2) / (2 * a * b), -1),1))
   
     # Converting to degree  
     alpha = alpha * 180 / math.pi
@@ -130,7 +145,7 @@ def get_cosines(A, B, C):
     gamma = np.cos(np.deg2rad(gamma))
 
     return alpha, betta, gamma
-### end code created by ApurvaRaj
+### end code adapted from ApurvaRaj
 
 def get_useful_triangles(ls):
     triangles = []
@@ -142,3 +157,11 @@ def get_useful_triangles(ls):
         triangles.append([ls[a], ls[b], ls[c]])
 
     return triangles
+
+def extract_closest_face(faces):
+    areas = []
+    for f in faces:
+        areas.append(f.height() * f.width())
+    
+    idx = np.argmax(areas)
+    return faces[idx]

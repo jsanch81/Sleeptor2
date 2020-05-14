@@ -6,7 +6,8 @@ import os
 import wget
 import multiprocessing as mp
 from functools import partial
-from utils import eye_aspect_ratio, mouth_aspect_ratio, circularity, calculate_threshold, get_frame, calculate_eye_coords, get_useful_triangles, get_cosines
+from utils import eye_aspect_ratio, mouth_aspect_ratio, circularity, calculate_threshold
+from utils import get_frame, calculate_eye_coords, get_useful_triangles, get_cosines, extract_closest_face
 
 class Featurizer():
     def __init__(self):
@@ -80,14 +81,20 @@ class Featurizer():
                 count = 0
                 gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
                 rotation = self.calculate_rotation(gray)
+                count_bads = 0
+                bad = False
                 while success and count < self.n_samples_per_video:
                     if(rotation is not None):
                         gray = cv2.rotate(gray, rotation)
                     grays.append(gray)
                     rects = self.detector(gray,0)
-                    if len(rects) == 1:
+                    if(len(rects) >= 1):
+                        if(len(rects)==1):
+                            face = rects[0]
+                        else:
+                            face = extract_closest_face(rects)
                         count += 1
-                        shape = self.predictor(gray, rects[0])
+                        shape = self.predictor(gray, face)
                         shape = face_utils.shape_to_np(shape)
                         landmarks.append(shape)
                         labels.append([float(i)])
@@ -97,16 +104,28 @@ class Featurizer():
                         if(success):
                             gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
                     else:
+                        count_bads += 1
+                        if(count_bads > self.n_samples_per_video/50):
+                            bad = True
+                            break
                         print("face not detected for fold: %s, person: %s, video:%d.mp4, at second: %.1f" % (fold, person, i, sec))
                         sec = sec + step
                         sec = round(sec, 2)
                         success, image = get_frame(sec, cap)
                         if(success):
                             gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-            landmarks = np.array(landmarks)
-            labels = np.array(labels)
-            data = np.append(landmarks, np.append(labels.reshape(-1, 1, 1), np.zeros((labels.shape[0], 1, 1)), axis=2), axis=1)
-            np.save(data_filename, data)
+                if(bad):
+                    break
+
+            if(cont == self.n_samples_per_video):
+                landmarks = np.array(landmarks)
+                labels = np.array(labels)
+                data = np.append(landmarks, np.append(labels.reshape(-1, 1, 1), np.zeros((labels.shape[0], 1, 1)), axis=2), axis=1)
+                np.save(data_filename, data)
+            else:
+                landmarks = None
+                labels = None
+                grays = None
         else:
             data = np.load(data_filename, allow_pickle=True)
             assert data.shape[1] == self.n_landmarks + 1
@@ -177,6 +196,7 @@ class Featurizer():
         data_filename = self.data_dir + 'data_' + str(self.size) + '_' + str(self.step) + '_' + str(self.n_samples_per_video) + '.npy'
         medias_filename = self.data_dir + 'medias_' + str(self.size) + '_' + str(self.step) + '_' + str(self.n_samples_per_video) + '.npy'
         if(not os.path.isfile(data_filename)):
+            # eliminar por que no permite paralelizar este objeto
             del self.blob_detector
 
             data = np.empty((0, self.n_features*self.size+1), dtype=np.float32)
@@ -184,7 +204,6 @@ class Featurizer():
             folds = [x for x in os.listdir('data/') if x.startswith('Fold') and not '.zip' in x]
 
             for fold in folds:
-                banned = ['07', '08', '13', '14', '33', '49', '51', '58']
                 people = [x for x in os.listdir('data/'+fold) if x.isnumeric() and not x in banned]
                 part = partial(self.extract_person, fold)
 
@@ -194,12 +213,14 @@ class Featurizer():
                     
                 
                 for data_p, medias_p in results:
-                    data = np.append(data, data_p, axis=0)
-                    medias = np.append(medias, medias_p, axis=0)
+                    if(data_p is not None):
+                        data = np.append(data, data_p, axis=0)
+                        medias = np.append(medias, medias_p, axis=0)
 
             np.save(data_filename, data)
             np.save(medias_filename, medias)
 
+            # volver a crear el objeto elimiando previamente
             detector_params = cv2.SimpleBlobDetector_Params()
             detector_params.filterByArea = True
             detector_params.maxArea = 1500 # Because no pupil has area bigger than 1500 pixels
@@ -214,14 +235,18 @@ class Featurizer():
 
     def extract_person(self, fold, person):
         landmarks_p, labels_p, grays = self.extract(fold, person)
-        features_p, _, _ = self.featurize(landmarks_p, None)
-        part = list(labels_p).index(1)
-        atento = features_p[:part]
-        vents_atento, meds_atento = self.serializer(atento, 0)
-        dormido = features_p[part:]
-        vents_dormido, meds_dormido = self.serializer(dormido, 1)
-        data_p = np.append(vents_dormido, vents_atento, axis=0).squeeze()
-        medias_p = np.append(meds_atento, meds_dormido, axis=0).squeeze()
+        if(landmarks_p is not None):
+            features_p, _, _ = self.featurize(landmarks_p, None)
+            part = list(labels_p).index(1)
+            atento = features_p[:part]
+            vents_atento, meds_atento = self.serializer(atento, 0)
+            dormido = features_p[part:]
+            vents_dormido, meds_dormido = self.serializer(dormido, 1)
+            data_p = np.append(vents_dormido, vents_atento, axis=0).squeeze()
+            medias_p = np.append(meds_atento, meds_dormido, axis=0).squeeze()
+        else:
+            data_p = None
+            medias_p = None
         
         return [data_p, medias_p]
 
