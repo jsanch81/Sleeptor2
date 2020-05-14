@@ -114,7 +114,7 @@ class Featurizer():
                         success, image = get_frame(sec, cap)
                         if(success):
                             gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-                if(bad):
+                if(bad or count < self.n_samples_per_video):
                     break
 
             if(count == self.n_samples_per_video):

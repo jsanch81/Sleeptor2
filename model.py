@@ -19,7 +19,7 @@ class Model():
         self.n_features = n_features
         self.mode = mode
         self.size = size
-        self.n_samples = n_samples
+        self.n_samples = n_samples - size
 
     def balanced_split(self, X, y, idx):
         idxs_train = set(np.arange(len(X)))
@@ -36,8 +36,10 @@ class Model():
 
     def train(self, X, y):
         y = y.ravel()
+        print(len(X))
 
         n_people = int(len(X)/(2*self.n_samples))
+        print("n people:", n_people)
         acc_global = 0
         f1_global = 0
         roc_global = 0
