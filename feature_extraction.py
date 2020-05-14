@@ -123,14 +123,20 @@ class Featurizer():
                 data = np.append(landmarks, np.append(labels.reshape(-1, 1, 1), np.zeros((labels.shape[0], 1, 1)), axis=2), axis=1)
                 np.save(data_filename, data)
             else:
+                data = np.ones((1,1))
+                np.save(data_filename, data)
                 landmarks = None
                 labels = None
                 grays = None
         else:
             data = np.load(data_filename, allow_pickle=True)
-            assert data.shape[1] == self.n_landmarks + 1
-            landmarks = data[:,:self.n_landmarks,:]
-            labels = data[:,[-1], 0]
+            if(len(data)==self.n_samples_per_video*2):
+                assert data.shape[1] == self.n_landmarks + 1
+                landmarks = data[:,:self.n_landmarks,:]
+                labels = data[:,[-1], 0]
+            else:
+                landmarks = None
+                labels = None
             grays = None
         return landmarks, labels, grays
 
