@@ -23,7 +23,7 @@ class Featurizer():
         detector_params.maxArea = 1500 # Because no pupil has area bigger than 1500 pixels
         self.blob_detector = cv2.SimpleBlobDetector_create(detector_params)
         self.n_landmarks = 68
-        self.n_features = 5 + 54 # 3 cosines for each one of the 18 relevant triangles in face = 54
+        self.n_features = 5 #+ 54 # 3 cosines for each one of the 18 relevant triangles in face = 54
         # cuantos frames de cada video se van a capturar
         self.n_samples_per_video = 3000
         # cuantos frames por segundo se van a capturar
@@ -117,7 +117,7 @@ class Featurizer():
                 if(bad):
                     break
 
-            if(cont == self.n_samples_per_video):
+            if(count == self.n_samples_per_video):
                 landmarks = np.array(landmarks)
                 labels = np.array(labels)
                 data = np.append(landmarks, np.append(labels.reshape(-1, 1, 1), np.zeros((labels.shape[0], 1, 1)), axis=2), axis=1)
@@ -151,11 +151,11 @@ class Featurizer():
             xl = None
             xr = None
 
-            triangles = get_useful_triangles(ls_i)
-            cosines = []
-            for triangle in triangles:
-                tmp = get_cosines(triangle)
-                cosines.extend(tmp)
+            #triangles = get_useful_triangles(ls_i)
+            #cosines = []
+            #for triangle in triangles:
+            #    tmp = get_cosines(triangle)
+            #    cosines.extend(tmp)
 
             if(grays is not None):
                 # detectar posicion de la pupila
@@ -189,7 +189,8 @@ class Featurizer():
                     xr = None
                     yr = None
 
-            features = np.append(features, [[earl, earr, mar, cir, mouth_eye].extend(cosines)], axis=0)
+            # features = np.append(features, [[earl, earr, mar, cir, mouth_eye].extend(cosines)], axis=0)
+            features = np.append(features, [[earl, earr, mar, cir, mouth_eye]], axis=0)
         return features, xl, xr
 
     def run(self):
@@ -204,7 +205,7 @@ class Featurizer():
             folds = [x for x in os.listdir('data/') if x.startswith('Fold') and not '.zip' in x]
 
             for fold in folds:
-                people = [x for x in os.listdir('data/'+fold) if x.isnumeric() and not x in banned]
+                people = [x for x in os.listdir('data/'+fold) if x.isnumeric()]
                 part = partial(self.extract_person, fold)
 
                 pool = mp.Pool(min(6, mp.cpu_count()-3))
