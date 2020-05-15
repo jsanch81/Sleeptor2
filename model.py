@@ -20,10 +20,9 @@ class Model():
         self.n_features = n_features
         self.mode = mode
         self.size = size
-        self.n_samples = n_samplesx
+        self.n_samples = n_samples
         self.type_model = type_model
     def balanced_split(self, X, y, train_size):
-
         print(self.n_samples)
         X_train = X[:-2*self.n_samples]
         y_train = y[:-2*self.n_samples]
@@ -41,8 +40,7 @@ class Model():
             y = y.ravel()
 
             X_train, X_test, y_train, y_test = self.balanced_split(X, y, 0.7)
-            print('-----------------------------')
-            print(X_train, X_test)
+
             if self.type_model == 'logisticRegression':
                 self.model = LogisticRegression(random_state=0)
             else:

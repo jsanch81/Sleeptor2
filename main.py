@@ -10,7 +10,7 @@ def main():
     df.to_csv('data.csv')
     # mode = 'concat'
     mode = 'concat'
-    type_model = 'logisticRegressi'
+    type_model = 'logisticRegression'
 
     model = Model(featurizer.n_features, mode, featurizer.size, featurizer.n_samples_per_video, type_model)
     if(mode == 'concat'):

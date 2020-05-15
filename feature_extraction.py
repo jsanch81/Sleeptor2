@@ -41,22 +41,22 @@ def calculate_threshold(gray, ls, d1, d2, d3, d4):
         Parameters d1 to d4 are the distance between the upper and the lower landmarks of the eye.
         :return threshold: threshold for binarizing image.
         """
-        
+
         x1 = int((ls[36][0] + (ls[37][0] + ls[41][0])/2)/2)
         y1 = ls[36][1]
         t1 = gray[y1,x1]
-        
+
         x2 = int((ls[39][0] + (ls[38][0] + ls[40][0])/2)/2)
         y2 = ls[39][1]
         t2 = gray[y2, x2]
-        
+
         # takes the lowest if the difference is no longer that 10% else takes the highest.
         p1 = min(t1,t2) if (min(t1,t2) >= max(t1,t2)*0.9) else max(t1,t2)
 
         x3 = int((ls[42][0] + (ls[43][0] + ls[47][0])/2)/2)
         y3 = ls[42][1]
         t3 = gray[y3,x3]
-        
+
         x4 = int((ls[45][0] + (ls[44][0] + ls[46][0])/2)/2)
         y4 = ls[45][1]
         t4 = gray[y4, x4]
@@ -88,7 +88,7 @@ def calculate_eye_coords(ls, a,b,c,d,e,f):
     """
     Function that calculates the rectangle where the eye is located.
     :param ls: list of landmarks
-    Params a to f are the number of the landmark of each eye, a is the left corner of the eye and they are clockwise ordered. 
+    Params a to f are the number of the landmark of each eye, a is the left corner of the eye and they are clockwise ordered.
     Then b is the upper left landmark, c the upper right and so on. d is the right corner of the eye.
     :return [x,y,w,h]
     """
@@ -153,7 +153,7 @@ class Featurizer():
         #cv2.imwrite('erod_dila.jpg', img)
         img = cv2.medianBlur(img, 7)
         #cv2.imwrite('proc.jpg', img)
-        
+
         keypoints = self.blob_detector.detect(img)
 
         return keypoints
@@ -237,7 +237,7 @@ class Featurizer():
 
                 # umbral para definir color blanco de los ojos
                 threshold = calculate_threshold(gray, ls_i, d1, d2, d3, d4)
-        
+
                 # ubicar pupila izquierda
                 keypoints = self.process_eye(gray, left_eye_coords, threshold)
                 if(len(keypoints) > 0):
@@ -246,7 +246,7 @@ class Featurizer():
                 else:
                     xl = None
                     yl = None
-                
+
                 # ubicar pupila derecha
                 keypoints = self.process_eye(gray, right_eye_coords, threshold)
                 if(len(keypoints) > 0):
@@ -274,11 +274,11 @@ class Featurizer():
                 people = [x for x in os.listdir('data/'+fold) if x.isnumeric() and not x in banned]
                 part = partial(self.extract_person, fold)
 
-                pool = mp.Pool(min(6, mp.cpu_count()-3))
+                pool = mp.Pool(min(6, mp.cpu_count()-2))
                 results = list(pool.imap(part, [person for person in people]))
                 pool.close()
-                    
-                
+
+
                 for data_p, medias_p in results:
                     data = np.append(data, data_p, axis=0)
                     medias = np.append(medias, medias_p, axis=0)
@@ -308,7 +308,7 @@ class Featurizer():
         vents_dormido, meds_dormido = self.serializer(dormido, 1)
         data_p = np.append(vents_dormido, vents_atento, axis=0).squeeze()
         medias_p = np.append(meds_atento, meds_dormido, axis=0).squeeze()
-        
+
         return [data_p, medias_p]
 
     def serializer(self, X, y):
