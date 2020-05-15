@@ -20,41 +20,62 @@ class Model():
         self.n_features = n_features
         self.mode = mode
         self.size = size
-        self.n_samples = n_samples
+        self.n_samples = n_samples - size
         self.type_model = type_model
-    def balanced_split(self, X, y, train_size):
-        print(self.n_samples)
-        X_train = X[:-2*self.n_samples]
-        y_train = y[:-2*self.n_samples]
-        X_test = X[-2*self.n_samples:]
-        y_test = y[-2*self.n_samples:]
+
+    def balanced_split(self, X, y, idx):
+        idxs_train = set(np.arange(len(X)))
+        idxs_test = set(np.arange(idx*2*self.n_samples, (idx+1)*2*self.n_samples))
+        idxs_train = np.array(list(idxs_train - idxs_test))
+        idxs_test = np.array(list(idxs_test))
+
+        X_train = X[idxs_train]
+        y_train = y[idxs_train]
+        X_test = X[idxs_test]
+        y_test = y[idxs_test]
 
         return X_train, X_test, y_train, y_test
 
     def train(self, X, y):
-        model_filename = 'data/models/model_' + str(self.n_features) + '_' + str(self.size) + '_' + str(len(X)) + '_' + self.type_model + self.mode + '.pkl'
+        y = y.ravel()
+        print(len(X))
 
-        if(os.path.isfile(model_filename)):
-            self.model = pickle.load(open(model_filename, 'rb'))
-        else:
-            y = y.ravel()
+        n_people = int(len(X)/(2*self.n_samples))
+        print("n people:", n_people)
+        acc_global = 0
+        f1_global = 0
+        roc_global = 0
+        for idx in range(n_people):
+            model_filename = 'data/models/model_' + str(self.n_features) + '_' + str(self.size) + '_' + str(len(X)) + '_'++ self.type_model +'_'+ self.mode + '_' + str(idx) + '.pkl'
+            X_train, X_test, y_train, y_test = self.balanced_split(X, y, idx)
 
-            X_train, X_test, y_train, y_test = self.balanced_split(X, y, 0.7)
-
-            if self.type_model == 'logisticRegression':
-                self.model = LogisticRegression(random_state=0)
+            if(os.path.isfile(model_filename)):
+                self.model = pickle.load(open(model_filename, 'rb'))
+            elif self.type_model == 'logisticRegression':
+                self.model = LogisticRegression()
             else:
                 self.model = RandomForestClassifier()
+                #self.model = SVC(probability=True, kernel='sigmoid')
+                self.model.fit(X_train, y_train)
+                pickle.dump(self.model, open(model_filename, 'wb'))
 
-            self.model.fit(X_train, y_train)
-            pickle.dump(self.model, open(model_filename, 'wb'))
+            preds = self.model.predict(X_test)
+            acc = accuracy_score(y_test, preds)
+            probas = self.model.predict_proba(X_test)[:,1]
+            f1 = metrics.f1_score(y_test, preds)
+            roc = metrics.roc_auc_score(y_test, probas)
 
-        preds = self.model.predict(X_test)
-        acc = accuracy_score(y_test, preds)
-        probas = self.model.predict_proba(X_test)[:,1]
-        f1 = metrics.f1_score(y_test, preds)
-        roc = metrics.roc_auc_score(y_test, probas)
+            print('for idx:', idx)
+            print(' acc: {}\n f1 score: {}\n roc_auc score: {}'.format(acc, f1, roc))
+            print('confusion matrix')
+            print(confusion_matrix(y_test, preds))
 
-        print(' acc: {}\n f1 score: {}\n roc_auc score: {}'.format(acc, f1, roc))
-        print('confusion matrix')
-        print(confusion_matrix(y_test, preds))
+            acc_global += acc
+            f1_global += f1
+            roc_global += roc
+
+        acc_global /= n_people
+        f1_global /= n_people
+        roc_global /= n_people
+        print('\nglobal:')
+        print(' acc: {}\n f1 score: {}\n roc_auc score: {}'.format(acc_global, f1_global, roc_global))
