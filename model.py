@@ -46,16 +46,17 @@ class Model():
         f1_global = 0
         roc_global = 0
         for idx in range(n_people):
-            model_filename = 'data/models/model_' + str(self.n_features) + '_' + str(self.size) + '_' + str(len(X)) + '_'++ self.type_model +'_'+ self.mode + '_' + str(idx) + '.pkl'
+            model_filename = 'data/models/model_' + str(self.n_features) + '_' + str(self.size) + '_' + str(len(X)) + '_'+self.type_model +'_'+ self.mode + '_' + str(idx) + '.pkl'
             X_train, X_test, y_train, y_test = self.balanced_split(X, y, idx)
-
+            print(X_train.shape)
             if(os.path.isfile(model_filename)):
                 self.model = pickle.load(open(model_filename, 'rb'))
-            elif self.type_model == 'logisticRegression':
-                self.model = LogisticRegression()
             else:
-                self.model = RandomForestClassifier()
-                #self.model = SVC(probability=True, kernel='sigmoid')
+                if self.type_model == 'logisticRegression':
+                    self.model = LogisticRegression(random_state=0)
+                else:
+                    self.model = RandomForestClassifier()
+                    #self.model = SVC(probability=True, kernel='sigmoid')
                 self.model.fit(X_train, y_train)
                 pickle.dump(self.model, open(model_filename, 'wb'))
 

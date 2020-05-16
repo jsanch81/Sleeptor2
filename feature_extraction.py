@@ -160,7 +160,7 @@ class Featurizer():
             triangles = get_useful_triangles(ls_i)
             cosines = []
             for triangle in triangles:
-               tmp = get_cosines(triangle)
+               tmp = get_cosines(*triangle)
                cosines.extend(tmp)
 
             if(grays is not None):
@@ -194,8 +194,10 @@ class Featurizer():
                 else:
                     xr = None
                     yr = None
+            print(np.array(cosines).shape)
 
-            features = np.append(features, [[earl, earr, mar, cir, mouth_eye].extend(cosines)], axis=0)
+            features = np.append(features, [[earl, earr, mar, cir, mouth_eye]+cosines], axis=0)
+            print(features.shape)
             #features = np.append(features, [[earl, earr, mar, cir, mouth_eye]], axis=0)
         return features, xl, xr
 
@@ -204,19 +206,20 @@ class Featurizer():
         medias_filename = self.data_dir + 'medias_' + str(self.size) + '_' + str(self.step) + '_' + str(self.n_samples_per_video) + '.npy'
         data_seleccion_filename = self.data_dir + 'data_seleccion_' + str(self.size) + '_' + str(self.step) + '_' + str(self.n_samples_per_video) + '.npy'
 
-        if(not os.path.isfile(data_filename)):
+        if(not os.path.isfile(data_seleccion_filename)):
             # eliminar por que no permite paralelizar este objeto
             del self.blob_detector
 
             data = np.empty((0, self.n_features*self.size+1), dtype=np.float32)
             medias = np.empty((0, self.n_features+1), dtype=np.float32)
-            data_seleccion = np.empty((0, self.n_features+1), dtype=np.float32)
+            data_seleccion_final= np.empty((0, self.n_features+1), dtype=np.float32)
             folds = [x for x in os.listdir('data/') if x.startswith('Fold') and not '.zip' in x]
 
             for fold in folds:
                 people = [x for x in os.listdir('data/'+fold) if x.isnumeric()]
                 part = partial(self.extract_person, fold)
-
+                #print(people)
+                #print(part)
                 pool = mp.Pool(min(6, mp.cpu_count()-2))
                 results = list(pool.imap(part, [person for person in people]))
                 pool.close()
@@ -229,7 +232,7 @@ class Featurizer():
                         data_seleccion_final = np.append(data_seleccion_final, data_seleccion, axis=0)
             np.save(data_filename, data)
             np.save(medias_filename, medias)
-            np.save(data_seleccion_final)
+            np.save(data_seleccion_filename,data_seleccion_final)
 
             # volver a crear el objeto elimiando previamente
             detector_params = cv2.SimpleBlobDetector_Params()
@@ -240,9 +243,10 @@ class Featurizer():
         else:
             data = np.load(data_filename, allow_pickle=True)
             medias = np.load(medias_filename, allow_pickle=True)
+            data_seleccion_final = np.load(data_seleccion_filename, allow_pickle=True)
             assert data.shape[1] == self.n_features*self.size + 1
 
-        return data, medias
+        return data, medias, data_seleccion_final
 
     def extract_person(self, fold, person):
         landmarks_p, labels_p, grays = self.extract(fold, person)
@@ -250,10 +254,10 @@ class Featurizer():
             features_p, _, _ = self.featurize(landmarks_p, None)
             part = list(labels_p).index(1)
             atento = features_p[:part]
-            data_atento = getData(atento,0)
+            data_atento = self.getData(atento,1)
             vents_atento, meds_atento = self.serializer(atento, 0)
             dormido = features_p[part:]
-            data_dormido = getData(dormido,1)
+            data_dormido = self.getData(dormido,1)
             vents_dormido, meds_dormido = self.serializer(dormido, 1)
             data_p = np.append(vents_dormido, vents_atento, axis=0).squeeze()
             medias_p = np.append(meds_atento, meds_dormido, axis=0).squeeze()
@@ -266,9 +270,12 @@ class Featurizer():
         return [data_p, medias_p, data_seleccion]
 
     def getData(self, X, y):
-        data = np.concatenate((X,[[y]]));
+        data = []
+        for i in X:
+            #print(i.shape)
+            data.append(np.concatenate(([i],[[y]]), axis=1))
         data = np.array(data);
-        return data;
+        return data
 
     def serializer(self, X, y):
         ventanas = []
