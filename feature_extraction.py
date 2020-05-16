@@ -194,10 +194,8 @@ class Featurizer():
                 else:
                     xr = None
                     yr = None
-            print(np.array(cosines).shape)
 
             features = np.append(features, [[earl, earr, mar, cir, mouth_eye]+cosines], axis=0)
-            print(features.shape)
             #features = np.append(features, [[earl, earr, mar, cir, mouth_eye]], axis=0)
         return features, xl, xr
 
@@ -218,8 +216,6 @@ class Featurizer():
             for fold in folds:
                 people = [x for x in os.listdir('data/'+fold) if x.isnumeric()]
                 part = partial(self.extract_person, fold)
-                #print(people)
-                #print(part)
                 pool = mp.Pool(min(6, mp.cpu_count()-2))
                 results = list(pool.imap(part, [person for person in people]))
                 pool.close()
@@ -254,7 +250,7 @@ class Featurizer():
             features_p, _, _ = self.featurize(landmarks_p, None)
             part = list(labels_p).index(1)
             atento = features_p[:part]
-            data_atento = self.getData(atento,1)
+            data_atento = self.getData(atento,0)
             vents_atento, meds_atento = self.serializer(atento, 0)
             dormido = features_p[part:]
             data_dormido = self.getData(dormido,1)
@@ -271,8 +267,8 @@ class Featurizer():
 
     def getData(self, X, y):
         data = []
+
         for i in X:
-            #print(i.shape)
             data.append(np.concatenate(([i],[[y]]), axis=1))
         data = np.array(data);
         return data
