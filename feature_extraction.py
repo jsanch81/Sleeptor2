@@ -23,7 +23,7 @@ class Featurizer():
         detector_params.maxArea = 1500 # Because no pupil has area bigger than 1500 pixels
         self.blob_detector = cv2.SimpleBlobDetector_create(detector_params)
         self.n_landmarks = 68
-        self.n_features = 5 #+ 54 # 3 cosines for each one of the 18 relevant triangles in face = 54
+        self.n_features = 5 + 54 # 3 cosines for each one of the 18 relevant triangles in face = 54
         # cuantos frames de cada video se van a capturar
         self.n_samples_per_video = 3000
         # cuantos frames por segundo se van a capturar
@@ -157,11 +157,11 @@ class Featurizer():
             xl = None
             xr = None
 
-            #triangles = get_useful_triangles(ls_i)
-            #cosines = []
-            #for triangle in triangles:
-            #    tmp = get_cosines(triangle)
-            #    cosines.extend(tmp)
+            triangles = get_useful_triangles(ls_i)
+            cosines = []
+            for triangle in triangles:
+               tmp = get_cosines(triangle)
+               cosines.extend(tmp)
 
             if(grays is not None):
                 # detectar posicion de la pupila
@@ -195,19 +195,22 @@ class Featurizer():
                     xr = None
                     yr = None
 
-            # features = np.append(features, [[earl, earr, mar, cir, mouth_eye].extend(cosines)], axis=0)
-            features = np.append(features, [[earl, earr, mar, cir, mouth_eye]], axis=0)
+            features = np.append(features, [[earl, earr, mar, cir, mouth_eye].extend(cosines)], axis=0)
+            #features = np.append(features, [[earl, earr, mar, cir, mouth_eye]], axis=0)
         return features, xl, xr
 
     def run(self):
         data_filename = self.data_dir + 'data_' + str(self.size) + '_' + str(self.step) + '_' + str(self.n_samples_per_video) + '.npy'
         medias_filename = self.data_dir + 'medias_' + str(self.size) + '_' + str(self.step) + '_' + str(self.n_samples_per_video) + '.npy'
+        data_seleccion_filename = self.data_dir + 'data_seleccion_' + str(self.size) + '_' + str(self.step) + '_' + str(self.n_samples_per_video) + '.npy'
+
         if(not os.path.isfile(data_filename)):
             # eliminar por que no permite paralelizar este objeto
             del self.blob_detector
 
             data = np.empty((0, self.n_features*self.size+1), dtype=np.float32)
             medias = np.empty((0, self.n_features+1), dtype=np.float32)
+            data_seleccion = np.empty((0, self.n_features+1), dtype=np.float32)
             folds = [x for x in os.listdir('data/') if x.startswith('Fold') and not '.zip' in x]
 
             for fold in folds:
@@ -219,13 +222,14 @@ class Featurizer():
                 pool.close()
 
 
-                for data_p, medias_p in results:
+                for data_p, medias_p, data_seleccion in results:
                     if(data_p is not None):
                         data = np.append(data, data_p, axis=0)
                         medias = np.append(medias, medias_p, axis=0)
-
+                        data_seleccion_final = np.append(data_seleccion_final, data_seleccion, axis=0)
             np.save(data_filename, data)
             np.save(medias_filename, medias)
+            np.save(data_seleccion_final)
 
             # volver a crear el objeto elimiando previamente
             detector_params = cv2.SimpleBlobDetector_Params()
@@ -246,19 +250,27 @@ class Featurizer():
             features_p, _, _ = self.featurize(landmarks_p, None)
             part = list(labels_p).index(1)
             atento = features_p[:part]
+            data_atento = getData(atento,0)
             vents_atento, meds_atento = self.serializer(atento, 0)
             dormido = features_p[part:]
+            data_dormido = getData(dormido,1)
             vents_dormido, meds_dormido = self.serializer(dormido, 1)
             data_p = np.append(vents_dormido, vents_atento, axis=0).squeeze()
             medias_p = np.append(meds_atento, meds_dormido, axis=0).squeeze()
+            data_seleccion = np.append(data_atento, data_dormido, axis=0).squeeze()
         else:
             data_p = None
             medias_p = None
-        
-        return [data_p, medias_p]
+            data_seleccion = None
+
+        return [data_p, medias_p, data_seleccion]
+
+    def getData(self, X, y):
+        data = np.concatenate((X,[[y]]));
+        data = np.array(data);
+        return data;
 
     def serializer(self, X, y):
-
         ventanas = []
         medias = []
 
