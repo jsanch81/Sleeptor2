@@ -160,7 +160,7 @@ class Featurizer():
             triangles = get_useful_triangles(ls_i)
             cosines = []
             for triangle in triangles:
-               tmp = get_cosines(triangle)
+               tmp = get_cosines(*triangle)
                cosines.extend(tmp)
 
             if(grays is not None):
