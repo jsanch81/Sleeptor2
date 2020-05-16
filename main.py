@@ -4,10 +4,10 @@ from sleeptor import Sleeptor
 import pandas as pd
 def main():
     featurizer = Featurizer()
-    data, medias = featurizer.run()
+    data, medias, data_seleccion_final = featurizer.run()
 
-    df = pd.DataFrame(data)
-    df.to_csv('data.csv')
+    df = pd.DataFrame(data_seleccion_final)
+    df.to_csv('data_seleccion_final.csv')
     # mode = 'concat'
     mode = 'concat'
     type_model = 'logisticRegression'
