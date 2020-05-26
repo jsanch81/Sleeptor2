@@ -32,6 +32,9 @@ class Featurizer():
         self.size = 100
         # paso de la ventana deslizante
         self.step = 1
+
+        self.height = 48
+        self.width = 64
         assert self.n_samples_per_video > self.size + self.step
 
     def calculate_rotation(self, gray):
@@ -291,3 +294,90 @@ class Featurizer():
         medias = np.array(medias)
 
         return ventanas, medias
+    
+    def extrac_images(self):
+        images_filename =  self.data_dir + 'images_' + str(self.size) + '_' + str(self.step) + '_' + str(self.n_samples_per_video) + '.npy'
+        image_labels_filename = self.data_dir + 'images_labels_' + str(self.size) + '_' + str(self.step) + '_' + str(self.n_samples_per_video) + '.npy'
+
+        if(not os.path.isfile(images_filename)):
+            images = None
+            labels = []
+            folds = [x for x in os.listdir('data/') if x.startswith('Fold') and not '.zip' in x]
+
+            for fold in folds:
+                people = [x for x in os.listdir('data/'+fold) if x.isnumeric()]
+                for person in people:
+                    images_p_filename = self.data_dir + fold + '/' + person + '/images_' + str(self.height) + '_' + str(self.width) + '_' + str(self.n_samples_per_video) + '.npy'
+                    image_labels_p_filename = self.data_dir + fold + '/' + person + '/images_labels_' + str(self.height) + '_' + str(self.width) + '_' + str(self.n_samples_per_video) + '.npy'
+                    images_p = []
+                    labels_p = []
+                    if(not os.path.isfile(images_p_filename)):
+                        for i in [0,1]:
+                            cap = cv2.VideoCapture(self.data_dir + fold + '/' + person + '/' + str(i) + '.mp4')
+                            sec = 0
+                            step = 1.0/self.frame_rate
+                            success, image = get_frame(sec, cap)
+                            count = 0
+                            gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+                            rotation = self.calculate_rotation(gray)
+                            while success and count < self.n_samples_per_video:
+                                if(rotation is not None):
+                                    gray = cv2.rotate(gray, rotation)
+                                gray = cv2.resize(gray, (self.height, self.width))
+                                images_p.append(gray)
+                                count += 1
+                                labels_p.append([float(i)])
+                                sec = sec + step
+                                sec = round(sec, 2)
+                                success, image = get_frame(sec, cap)
+                                if(success):
+                                    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+
+                    else:
+                        images_p = np.load(images_p_filename, allow_pickle=True)
+                        labels_p = np.load(image_labels_p_filename, allow_pickle=True)
+                    
+                    wall = int(len(images_p)/2)
+                    images_0 = images_p[:wall]
+                    images_1 = images_p[wall:]
+                    labels_0 = labels_p[:wall]
+                    labels_1 = labels_p[wall:]
+
+                    vents_0, labels_0 = self.ventanizar(images_0, labels_0)
+                    vents_1, labels_1 = self.ventanizar(images_1, labels_1)
+
+                    images_p = np.concatenate((vents_0, vents_1), axis=0)
+                    labels_p = np.concatenate((labels_0, labels_1), axis=0)
+
+                    np.save(images_p_filename, np.array(images_p))
+                    np.save(image_labels_p_filename, np.array(labels_p))
+
+                    if(images is None):
+                        images = images_p.copy()
+                    else:
+                        images = np.concatenate((images, images_p), axis=0)
+                    labels.extend(labels_p)
+            labels = np.array(labels)
+
+            np.save(images_filename, images)
+            np.save(image_labels_filename, labels)
+        else:
+            images = np.load(images_filename, allow_pickle=True)
+            labels = np.load(image_labels_filename, allow_pickle=True)
+        return images, labels
+
+    def ventanizar(self, X, y):
+        ventanas = []
+        labels = []
+        
+        for i in range(0, len(X)-self.size, self.step):
+            ventana = np.expand_dims(X[i:i+self.size], axis=-1)
+            ventanas.append(ventana)
+            labels_i = y[0]
+            labels.append(labels_i)
+        ventanas = np.array(ventanas)
+        labels = np.array(labels)
+        return ventanas, labels
+
+
+

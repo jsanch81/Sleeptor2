@@ -5,13 +5,13 @@ from sklearn.metrics import accuracy_score
 from sklearn.metrics import confusion_matrix
 from sklearn import metrics
 from sklearn.cluster import KMeans, MeanShift
-from sklearn_extra.cluster import KMedoids
 import pickle
 import numpy as np
 import os
 from keras.models import Sequential
-from keras.layers import Dense, Activation
-from keras.layers import LSTM
+from keras.layers import Dense, Activation, Reshape, Flatten
+from keras.layers import LSTM, ConvLSTM2D, Conv2D
+from keras.regularizers import l2
 
 def normalize(data):
     means = np.mean(data, axis=1).reshape(-1,1)
@@ -101,3 +101,62 @@ class Model():
         print('\nglobal:')
         #print(' acc: {}\n f1 score: {}\n roc_auc score: {}'.format(acc_global, f1_global, roc_global))
         print(' acc: {}\n f1 score: {}\n'.format(acc_global, f1_global))
+
+    def train_lstm(self, X, y):
+        X_train, X_test, y_train, y_test = self.balanced_split(X, y, 0)
+        self.model = Sequential()
+        self.model.add(ConvLSTM2D(filters=40, kernel_size=(5, 5), strides=(3,3), input_shape=(None, 64, 48, 1), padding='valid', bias_regularizer=l2(1e-4), return_sequences=False))
+        #self.model.add(Conv2D(filters=30, kernel_size=(5, 5), strides=(3,3), input_shape=(None, 22, 16), padding='same'))
+        #self.model.add(Conv2D(filters=20, kernel_size=(5, 5), strides=(2,2), input_shape=(None, 8, 6), padding='same'))
+        #self.model.add(Conv2D(filters=15, kernel_size=(5, 5), strides=(2,2), input_shape=(None, 16, 12), padding='same'))
+        #self.model.add(Conv2D(filters=10, kernel_size=(5, 5), strides=(2,2), input_shape=(None, 8, 6), padding='same'))
+        #self.model.add(Conv2D(filters=5, kernel_size=(5, 5), strides=(2,2), input_shape=(None, 4, 3), padding='same'))
+        # for layer in self.model.layers:
+        #     print(layer.output_shape)
+
+        self.model.add(Flatten())
+        self.model.add(Dense(1, bias_regularizer=l2(1e-4)))
+        self.model.add(Activation('sigmoid'))
+        # print(self.model.count_params())
+        # print(get_model_memory_usage(40, self.model))
+
+        self.model.compile(loss='binary_crossentropy', optimizer='adam')
+        
+        self.model.fit(X_train, y_train, validation_data=(X_test, y_test), epochs=10, batch_size=40, verbose=2)
+
+        preds = self.model.predict_classes(X_test)
+        acc = accuracy_score(y_test, preds)
+        #probas = self.model.predict_proba(X_test)[:,1]
+        f1 = metrics.f1_score(y_test, preds)
+
+        print(acc, f1)
+
+def get_model_memory_usage(batch_size, model):
+    import numpy as np
+    from keras import backend as K
+
+    shapes_mem_count = 0
+    internal_model_mem_count = 0
+    for l in model.layers:
+        layer_type = l.__class__.__name__
+        if layer_type == 'Model':
+            internal_model_mem_count += get_model_memory_usage(batch_size, l)
+        single_layer_mem = 1
+        for s in l.output_shape:
+            if s is None:
+                continue
+            single_layer_mem *= s
+        shapes_mem_count += single_layer_mem
+
+    trainable_count = np.sum([K.count_params(p) for p in set(model.trainable_weights)])
+    non_trainable_count = np.sum([K.count_params(p) for p in set(model.non_trainable_weights)])
+
+    number_size = 4.0
+    if K.floatx() == 'float16':
+         number_size = 2.0
+    if K.floatx() == 'float64':
+         number_size = 8.0
+
+    total_memory = number_size*(batch_size*shapes_mem_count + trainable_count + non_trainable_count)
+    gbytes = np.round(total_memory / (1024.0 ** 3), 3) + internal_model_mem_count
+    return gbytes
