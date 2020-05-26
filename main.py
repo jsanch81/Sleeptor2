@@ -39,7 +39,7 @@ def main():
     #print(labels.shape)
     mode = 'lstm'
     type_model = 'lstm'
-    model = Model(featurizer.n_features, mode, featurizer.size, featurizer.n_samples_per_video, type_model)
+    model = Model(featurizer.n_features, mode, featurizer.size, featurizer.step, featurizer.n_samples_per_video, type_model)
     model.train_lstm(images, labels)
 
 

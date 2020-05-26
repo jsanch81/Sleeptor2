@@ -21,18 +21,18 @@ def normalize(data):
 
 
 class Model():
-    def __init__(self, n_features, mode, size, n_samples, type_model):
+    def __init__(self, n_features, mode, size, step, n_samples, type_model):
         self.n_features = n_features
         self.mode = mode
         self.size = size
-        self.n_samples = n_samples - size
+        self.n_samples = (n_samples - size)/step
         self.type_model = type_model
 
     def balanced_split(self, X, y, idx):
         idxs_train = set(np.arange(len(X)))
         idxs_test = set(np.arange(idx*2*self.n_samples, (idx+1)*2*self.n_samples))
-        idxs_train = np.array(list(idxs_train - idxs_test))
-        idxs_test = np.array(list(idxs_test))
+        idxs_train = np.array(list(idxs_train - idxs_test), dtype=np.int32)
+        idxs_test = np.array(list(idxs_test), dtype=np.int32)
 
         X_train = X[idxs_train]
         y_train = y[idxs_train]
@@ -105,7 +105,7 @@ class Model():
     def train_lstm(self, X, y):
         X_train, X_test, y_train, y_test = self.balanced_split(X, y, 0)
         self.model = Sequential()
-        self.model.add(ConvLSTM2D(filters=40, kernel_size=(5, 5), strides=(3,3), input_shape=(None, 64, 48, 1), padding='valid', bias_regularizer=l2(1e-4), return_sequences=False))
+        self.model.add(ConvLSTM2D(filters=40, kernel_size=(5, 5), strides=(3,3), input_shape=(None, 64, 64, 1), padding='valid', bias_regularizer=l2(1e-4), return_sequences=False))
         #self.model.add(Conv2D(filters=30, kernel_size=(5, 5), strides=(3,3), input_shape=(None, 22, 16), padding='same'))
         #self.model.add(Conv2D(filters=20, kernel_size=(5, 5), strides=(2,2), input_shape=(None, 8, 6), padding='same'))
         #self.model.add(Conv2D(filters=15, kernel_size=(5, 5), strides=(2,2), input_shape=(None, 16, 12), padding='same'))
