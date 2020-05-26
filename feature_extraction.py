@@ -25,15 +25,15 @@ class Featurizer():
         self.n_landmarks = 68
         self.n_features = 5 # + 54 # 3 cosines for each one of the 18 relevant triangles in face = 54
         # cuantos frames de cada video se van a capturar
-        self.n_samples_per_video = 1500
+        self.n_samples_per_video = 500
         # cuantos frames por segundo se van a capturar
         self.frame_rate = 5
         # tamaño de la ventana deslizante
         self.size = 100
         # paso de la ventana deslizante
-        self.step = 1
+        self.step = 5
 
-        self.height = 48
+        self.height = 64
         self.width = 64
         assert self.n_samples_per_video > self.size + self.step
 
@@ -323,10 +323,18 @@ class Featurizer():
                             while success and count < self.n_samples_per_video:
                                 if(rotation is not None):
                                     gray = cv2.rotate(gray, rotation)
-                                gray = cv2.resize(gray, (self.height, self.width))
-                                images_p.append(gray)
-                                count += 1
-                                labels_p.append([float(i)])
+                                
+                                rects = self.detector(gray,0)
+                                if(len(rects) >= 1):
+                                    if(len(rects)==1):
+                                        face = rects[0]
+                                    else:
+                                        face = extract_closest_face(rects)
+                                    gray = gray[max(face.top(),0):max(face.bottom(),0), max(face.left(),0):max(face.right(),0)]
+                                    gray = cv2.resize(gray, (self.height, self.width))
+                                    images_p.append(gray)
+                                    count += 1
+                                    labels_p.append([float(i)])
                                 sec = sec + step
                                 sec = round(sec, 2)
                                 success, image = get_frame(sec, cap)
