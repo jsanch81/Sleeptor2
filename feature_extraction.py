@@ -23,9 +23,9 @@ class Featurizer():
         detector_params.maxArea = 1500 # Because no pupil has area bigger than 1500 pixels
         self.blob_detector = cv2.SimpleBlobDetector_create(detector_params)
         self.n_landmarks = 68
-        self.n_features = 5 + 54 # 3 cosines for each one of the 18 relevant triangles in face = 54
+        self.n_features = 5 # + 54 # 3 cosines for each one of the 18 relevant triangles in face = 54
         # cuantos frames de cada video se van a capturar
-        self.n_samples_per_video = 3000
+        self.n_samples_per_video = 1500
         # cuantos frames por segundo se van a capturar
         self.frame_rate = 5
         # tamaño de la ventana deslizante
@@ -195,8 +195,12 @@ class Featurizer():
                     xr = None
                     yr = None
 
-            features = np.append(features, [[earl, earr, mar, cir, mouth_eye]+cosines], axis=0)
-            #features = np.append(features, [[earl, earr, mar, cir, mouth_eye]], axis=0)
+            angulo_int_ojo = (cosines[7]+cosines[18])/2
+            angulo_ext_ojo = (cosines[0]+cosines[25])/2
+            boca_ojo = (cosines[40]+cosines[46])/2
+            features = np.append(features, [[ear, mar, angulo_int_ojo, boca_ojo, angulo_ext_ojo]], axis=0)
+            # features = np.append(features, [[earl, earr, mar, cir, mouth_eye]+cosines], axis=0)
+            # features = np.append(features, [[earl, earr, mar, cir, mouth_eye]], axis=0)
         return features, xl, xr
 
     def run(self):

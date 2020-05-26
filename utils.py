@@ -139,10 +139,10 @@ def get_cosines(A, B, C):
     betta = betta * 180 / math.pi
     gamma = gamma * 180 / math.pi
 
-    # applying cosine transformation
-    alpha = np.cos(np.deg2rad(alpha))
-    betta = np.cos(np.deg2rad(betta))
-    gamma = np.cos(np.deg2rad(gamma))
+    # # applying cosine transformation
+    # alpha = np.cos(np.deg2rad(alpha))
+    # betta = np.cos(np.deg2rad(betta))
+    # gamma = np.cos(np.deg2rad(gamma))
 
     return alpha, betta, gamma
 ### end code adapted from ApurvaRaj
