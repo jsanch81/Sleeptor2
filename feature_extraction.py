@@ -341,6 +341,8 @@ class Featurizer():
                                 if(success):
                                     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 
+                        np.save(images_p_filename, np.array(images_p))
+                        np.save(image_labels_p_filename, np.array(labels_p))
                     else:
                         images_p = np.load(images_p_filename, allow_pickle=True)
                         labels_p = np.load(image_labels_p_filename, allow_pickle=True)
@@ -357,8 +359,6 @@ class Featurizer():
                     images_p = np.concatenate((vents_0, vents_1), axis=0)
                     labels_p = np.concatenate((labels_0, labels_1), axis=0)
 
-                    np.save(images_p_filename, np.array(images_p))
-                    np.save(image_labels_p_filename, np.array(labels_p))
 
                     if(images is None):
                         images = images_p.copy()
