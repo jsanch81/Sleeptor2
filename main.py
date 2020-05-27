@@ -29,7 +29,6 @@ def main():
     #     X_batch = X.reshape(X.shape[0], featurizer.size, featurizer.n_features)
     #     model.train(X_batch, y)
 
-
     # # sleeptor = Sleeptor(featurizer, model)
     # # sleeptor.live(mode)
 
@@ -42,8 +41,8 @@ def main():
     model = Model(featurizer.n_features, mode, featurizer.size, featurizer.step, featurizer.n_samples_per_video, type_model)
     model.train_lstm(images, labels)
 
-    sleeptor = Sleeptor(featurizer, model)
-    sleeptor.live(mode)
+    #sleeptor = Sleeptor(featurizer, model)
+    #sleeptor.live(mode)
 
 
 if __name__ == '__main__':

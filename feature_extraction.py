@@ -25,7 +25,7 @@ class Featurizer():
         self.n_landmarks = 68
         self.n_features = 5 # + 54 # 3 cosines for each one of the 18 relevant triangles in face = 54
         # cuantos frames de cada video se van a capturar
-        self.n_samples_per_video = 500
+        self.n_samples_per_video = 200
         # cuantos frames por segundo se van a capturar
         self.frame_rate = 5
         # tamaño de la ventana deslizante

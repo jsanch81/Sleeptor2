@@ -5,3 +5,5 @@ wget
 dlib
 imutils
 scikit-learn
+pandas
+keras

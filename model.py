@@ -9,10 +9,11 @@ import pickle
 import numpy as np
 import os
 from keras.models import Sequential
-from keras.layers import Dense, Activation, Reshape, Flatten
+from keras.layers import Dense, Activation, Reshape, Flatten, Dropout
 from keras.layers import LSTM, ConvLSTM2D, Conv2D
 from keras.regularizers import l2
 from keras.models import load_model
+from keras.optimizers import Adam
 
 def normalize(data):
     means = np.mean(data, axis=1).reshape(-1,1)
@@ -117,15 +118,40 @@ class Model():
                 self.model = load_model(model_filename)
             else:
                 self.model = Sequential()
-                self.model.add(ConvLSTM2D(filters=40, kernel_size=(5, 5), strides=(3,3), input_shape=(None, 64, 64, 1), padding='valid', bias_regularizer=l2(1e-4), return_sequences=False))
-
+                self.model.add(ConvLSTM2D(filters=40, kernel_size=(5, 5), strides=(3,3), input_shape=(None, 64, 64, 1), padding='valid', bias_regularizer=l2(1e-3), return_sequences=False, dropout=0.0, kernel_regularizer=l2(1e-3), recurrent_regularizer=l2(1e-3)))
+                #self.model.add(Dropout(0.5))
                 self.model.add(Flatten())
-                self.model.add(Dense(1, bias_regularizer=l2(1e-4)))
+                self.model.add(Dense(1, bias_regularizer=l2(1e-3), kernel_regularizer=l2(1e-3)))
                 self.model.add(Activation('sigmoid'))
-
-                self.model.compile(loss='binary_crossentropy', optimizer='adam')
                 
-                self.model.fit(X_train, y_train, validation_data=(X_test, y_test), epochs=10, batch_size=40, verbose=2)
+                opt = Adam(learning_rate=0.00001)
+                self.model.compile(loss='binary_crossentropy', optimizer=opt)
+                
+                tmp_x = []
+                tmp_y = []
+                for i in range((n_people-1)*2):
+                    tmp_x.append(X_train[int(i*self.n_samples):int((i+1)*self.n_samples)])
+                    tmp_y.append(y_train[int(i*self.n_samples):int((i+1)*self.n_samples)])
+                loss_m2 = np.inf
+                loss_m1 = np.inf
+                while(True):
+                    i = np.random.randint(self.n_samples)
+                    batch_x = []
+                    batch_y = []
+                    for cx, cy in zip(tmp_x, tmp_y):
+                        batch_x.append(cx[int(i%self.n_samples)])
+                        batch_y.append(cy[int(i%self.n_samples)])
+                    batch_x = np.array(batch_x)
+                    batch_y = np.array(batch_y)
+                    self.model.train_on_batch(batch_x, batch_y)
+                    loss = self.model.test_on_batch(X_test, y_test)
+                    print(loss)
+                    if(loss > loss_m1 and loss_m1>loss_m2):
+                        break
+                    loss_m2 = loss_m1
+                    loss_m1 = loss
+                
+                # self.model.fit(X_train, y_train, validation_data=(X_test, y_test), epochs=5, batch_size=50, verbose=2, steps_per_epoch=10, validation_steps=1)
 
                 self.model.save(model_filename)
 
@@ -139,7 +165,7 @@ class Model():
             f1_global += f1
             roc_global += roc
 
-            print(acc, f1, roc)
+            print(idx, acc, f1, roc)
         acc_global/=n_people
         f1_global/=n_people
         roc_global/=n_people
