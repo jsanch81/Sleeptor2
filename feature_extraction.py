@@ -312,12 +312,14 @@ class Featurizer():
                     images_p = []
                     labels_p = []
                     if(not os.path.isfile(images_p_filename)):
+                        bad = False
                         for i in [0,1]:
                             cap = cv2.VideoCapture(self.data_dir + fold + '/' + person + '/' + str(i) + '.mp4')
                             sec = 0
                             step = 1.0/self.frame_rate
                             success, image = get_frame(sec, cap)
                             count = 0
+                            count_bads = 0
                             gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
                             rotation = self.calculate_rotation(gray)
                             while success and count < self.n_samples_per_video:
@@ -335,36 +337,46 @@ class Featurizer():
                                     images_p.append(gray)
                                     count += 1
                                     labels_p.append([float(i)])
+                                else:
+                                    count_bads += 1
+                                
+                                if(count_bads > 100):
+                                    bad = True
+                                    break
                                 sec = sec + step
                                 sec = round(sec, 2)
                                 success, image = get_frame(sec, cap)
                                 if(success):
                                     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-
+                            if(bad):
+                                break
                         np.save(images_p_filename, np.array(images_p))
                         np.save(image_labels_p_filename, np.array(labels_p))
                     else:
                         images_p = np.load(images_p_filename, allow_pickle=True)
                         labels_p = np.load(image_labels_p_filename, allow_pickle=True)
-                    
-                    wall = int(len(images_p)/2)
-                    images_0 = images_p[:wall]
-                    images_1 = images_p[wall:]
-                    labels_0 = labels_p[:wall]
-                    labels_1 = labels_p[wall:]
+                        count = len(images_p)
+                    if(count == self.n_samples_per_video):
+                        wall = int(len(images_p)/2)
+                        images_0 = images_p[:wall]
+                        images_1 = images_p[wall:]
+                        labels_0 = labels_p[:wall]
+                        labels_1 = labels_p[wall:]
 
-                    vents_0, labels_0 = self.ventanizar(images_0, labels_0)
-                    vents_1, labels_1 = self.ventanizar(images_1, labels_1)
+                        vents_0, labels_0 = self.ventanizar(images_0, labels_0)
+                        vents_1, labels_1 = self.ventanizar(images_1, labels_1)
 
-                    images_p = np.concatenate((vents_0, vents_1), axis=0)
-                    labels_p = np.concatenate((labels_0, labels_1), axis=0)
+                        images_p = np.concatenate((vents_0, vents_1), axis=0)
+                        labels_p = np.concatenate((labels_0, labels_1), axis=0)
 
 
-                    if(images is None):
-                        images = images_p.copy()
+                        if(images is None):
+                            images = images_p.copy()
+                        else:
+                            images = np.concatenate((images, images_p), axis=0)
+                        labels.extend(labels_p)
                     else:
-                        images = np.concatenate((images, images_p), axis=0)
-                    labels.extend(labels_p)
+                        print("bad person:", fold, person)
             labels = np.array(labels)
 
             np.save(images_filename, images)

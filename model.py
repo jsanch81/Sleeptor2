@@ -12,6 +12,7 @@ from keras.models import Sequential
 from keras.layers import Dense, Activation, Reshape, Flatten
 from keras.layers import LSTM, ConvLSTM2D, Conv2D
 from keras.regularizers import l2
+from keras.models import load_model
 
 def normalize(data):
     means = np.mean(data, axis=1).reshape(-1,1)
@@ -25,6 +26,7 @@ class Model():
         self.n_features = n_features
         self.mode = mode
         self.size = size
+        self.step = step
         self.n_samples = (n_samples - size)/step
         self.type_model = type_model
 
@@ -103,60 +105,44 @@ class Model():
         print(' acc: {}\n f1 score: {}\n'.format(acc_global, f1_global))
 
     def train_lstm(self, X, y):
-        X_train, X_test, y_train, y_test = self.balanced_split(X, y, 0)
-        self.model = Sequential()
-        self.model.add(ConvLSTM2D(filters=40, kernel_size=(5, 5), strides=(3,3), input_shape=(None, 64, 64, 1), padding='valid', bias_regularizer=l2(1e-4), return_sequences=False))
-        #self.model.add(Conv2D(filters=30, kernel_size=(5, 5), strides=(3,3), input_shape=(None, 22, 16), padding='same'))
-        #self.model.add(Conv2D(filters=20, kernel_size=(5, 5), strides=(2,2), input_shape=(None, 8, 6), padding='same'))
-        #self.model.add(Conv2D(filters=15, kernel_size=(5, 5), strides=(2,2), input_shape=(None, 16, 12), padding='same'))
-        #self.model.add(Conv2D(filters=10, kernel_size=(5, 5), strides=(2,2), input_shape=(None, 8, 6), padding='same'))
-        #self.model.add(Conv2D(filters=5, kernel_size=(5, 5), strides=(2,2), input_shape=(None, 4, 3), padding='same'))
-        # for layer in self.model.layers:
-        #     print(layer.output_shape)
+        n_people = int(len(X)/(2*self.n_samples))
+        print("n people:", n_people)
+        acc_global = 0
+        f1_global = 0
+        roc_global = 0
+        for idx in range(n_people):
+            model_filename = 'data/models/model_' + str(self.n_features) + '_' + str(self.size) + '_' + str(self.step) + '_' + str(len(X)) + '_'+self.type_model +'_'+ self.mode + '_' + str(idx) + '.h5'
+            X_train, X_test, y_train, y_test = self.balanced_split(X, y, idx)
+            if(os.path.isfile(model_filename)):
+                self.model = load_model(model_filename)
+            else:
+                self.model = Sequential()
+                self.model.add(ConvLSTM2D(filters=40, kernel_size=(5, 5), strides=(3,3), input_shape=(None, 64, 64, 1), padding='valid', bias_regularizer=l2(1e-4), return_sequences=False))
 
-        self.model.add(Flatten())
-        self.model.add(Dense(1, bias_regularizer=l2(1e-4)))
-        self.model.add(Activation('sigmoid'))
-        # print(self.model.count_params())
-        # print(get_model_memory_usage(40, self.model))
+                self.model.add(Flatten())
+                self.model.add(Dense(1, bias_regularizer=l2(1e-4)))
+                self.model.add(Activation('sigmoid'))
 
-        self.model.compile(loss='binary_crossentropy', optimizer='adam')
-        
-        self.model.fit(X_train, y_train, validation_data=(X_test, y_test), epochs=10, batch_size=40, verbose=2)
+                self.model.compile(loss='binary_crossentropy', optimizer='adam')
+                
+                self.model.fit(X_train, y_train, validation_data=(X_test, y_test), epochs=10, batch_size=40, verbose=2)
 
-        preds = self.model.predict_classes(X_test)
-        acc = accuracy_score(y_test, preds)
-        #probas = self.model.predict_proba(X_test)[:,1]
-        f1 = metrics.f1_score(y_test, preds)
+                self.model.save(model_filename)
 
-        print(acc, f1)
+            preds = self.model.predict_classes(X_test)
+            acc = accuracy_score(y_test, preds)
+            f1 = metrics.f1_score(y_test, preds)
+            probas = self.model.predict(X_test)
+            roc = metrics.roc_auc_score(y_test, probas)
 
-def get_model_memory_usage(batch_size, model):
-    import numpy as np
-    from keras import backend as K
+            acc_global += acc
+            f1_global += f1
+            roc_global += roc
 
-    shapes_mem_count = 0
-    internal_model_mem_count = 0
-    for l in model.layers:
-        layer_type = l.__class__.__name__
-        if layer_type == 'Model':
-            internal_model_mem_count += get_model_memory_usage(batch_size, l)
-        single_layer_mem = 1
-        for s in l.output_shape:
-            if s is None:
-                continue
-            single_layer_mem *= s
-        shapes_mem_count += single_layer_mem
-
-    trainable_count = np.sum([K.count_params(p) for p in set(model.trainable_weights)])
-    non_trainable_count = np.sum([K.count_params(p) for p in set(model.non_trainable_weights)])
-
-    number_size = 4.0
-    if K.floatx() == 'float16':
-         number_size = 2.0
-    if K.floatx() == 'float64':
-         number_size = 8.0
-
-    total_memory = number_size*(batch_size*shapes_mem_count + trainable_count + non_trainable_count)
-    gbytes = np.round(total_memory / (1024.0 ** 3), 3) + internal_model_mem_count
-    return gbytes
+            print(acc, f1, roc)
+        acc_global/=n_people
+        f1_global/=n_people
+        roc_global/=n_people
+        print("acc global:",acc_global)
+        print("f1 global:",f1_global)
+        print("roc global:", roc_global)

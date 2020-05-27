@@ -37,10 +37,13 @@ def main():
     images, labels = featurizer.extrac_images()
     #print(images.shape)
     #print(labels.shape)
-    mode = 'lstm'
+    mode = 'serie'
     type_model = 'lstm'
     model = Model(featurizer.n_features, mode, featurizer.size, featurizer.step, featurizer.n_samples_per_video, type_model)
     model.train_lstm(images, labels)
+
+    sleeptor = Sleeptor(featurizer, model)
+    sleeptor.live(mode)
 
 
 if __name__ == '__main__':
