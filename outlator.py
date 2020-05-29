@@ -52,8 +52,8 @@ class Outlator():
         e = np.ones((p,))
 
         # calcualte median and variance of median
-        # mu_CCM = np.median(data, axis=0)
-        mu_CCM = geometric_median(data)
+        mu_CCM = np.median(data, axis=0)
+        # mu_CCM = geometric_median(data)
         S_hat_CCM = 2.198*self.calculate_comedian(data, mu_CCM)
 
         # shrinkage for mu
@@ -99,7 +99,7 @@ class Outlator():
         threshold = scipy.stats.chi2.ppf(0.975, data.shape[1])
         return [x[1] for x in distances if x[0] > threshold]
     
-    def detect_tuckey(self, data):
+    def detect_tukey(self, data):
         u = np.random.normal(0,1,(300, data.shape[1]))
         scalar = data@u.T
         distances = []

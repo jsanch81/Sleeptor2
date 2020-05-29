@@ -8,6 +8,7 @@ import multiprocessing as mp
 from functools import partial
 from utils import eye_aspect_ratio, mouth_aspect_ratio, circularity, calculate_threshold
 from utils import get_frame, calculate_eye_coords, get_useful_triangles, get_cosines, extract_closest_face
+from outlator import Outlator
 
 class Featurizer():
     def __init__(self):
@@ -257,9 +258,20 @@ class Featurizer():
             features_p, _, _ = self.featurize(landmarks_p, None)
             part = list(labels_p).index(1)
             atento = features_p[:part]
+            
+            # quitar datos raros
+            outlator = Outlator()
+            raros = outlator.detect_robust(atento)
+            atento[raros, :] = np.nan
+            
             data_atento = self.getData(atento,0)
             vents_atento, meds_atento = self.serializer(atento, 0)
             dormido = features_p[part:]
+            
+            # quitar datos raros
+            raros = outlator.detect_robust(dormido)
+            dormido[raros, :] = np.nan
+            
             data_dormido = self.getData(dormido,1)
             vents_dormido, meds_dormido = self.serializer(dormido, 1)
             data_p = np.append(vents_dormido, vents_atento, axis=0).squeeze()

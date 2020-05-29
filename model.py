@@ -41,10 +41,10 @@ class Model():
         return X_train, X_test, y_train, y_test
 
     def train(self, X, y):
-        outlator = Outlator()
-        raros = outlator.detect_robust(X)
-        X[raros, :] = np.nan
-        print("raros encontrados:", len(raros))
+        # outlator = Outlator()
+        # raros = outlator.detect_robust(X)
+        # X[raros, :] = np.nan
+        # print("raros encontrados:", len(raros))
 
         X = normalize(X)
         if(self.type_model == 'lstm'):
@@ -78,48 +78,56 @@ class Model():
             y_test = y_test[idxs]
 
             print("luego de raros:", X_train.shape, X_test.shape)
-            if(os.path.isfile(model_filename)):
-                self.model = pickle.load(open(model_filename, 'rb'))
-                #self.model.fit(X_train, y_train)
-                #pickle.dump(self.model, open(model_filename, 'wb'))
+            if(len(X_test)<1):
+                n_people -= 1
             else:
-                if self.type_model == 'logisticRegression':
-                    self.model = LogisticRegression(random_state=0)
+                if(os.path.isfile(model_filename)):
+                    self.model = pickle.load(open(model_filename, 'rb'))
                     preds = self.model.predict(X_test)
                     probas = self.model.predict_proba(X_test)[:,1]
-                elif(self.type_model == 'lstm'):
-                        self.model = Sequential()
-                        self.model.add(LSTM(5, input_shape=(self.size, self.n_features),return_sequences=True))
-                        self.model.add(LSTM(5, input_shape=(self.size, self.n_features)))
-                        self.model.add(Dense(1))
-                        self.model.add(Activation('sigmoid'))
-                        self.model.compile(loss='binary_crossentropy', optimizer='adam')
-                        self.model.fit(X_train, y_train, validation_data=(X_test, y_test), epochs=100, batch_size=5000, verbose=2)
-                        preds = self.model.predict_classes(X_test)
-                        probas = self.model.predict(X_test)
+                    #self.model.fit(X_train, y_train)
+                    #pickle.dump(self.model, open(model_filename, 'wb'))
                 else:
-                    self.model = RandomForestClassifier()
-                    #self.model = SVC(probability=True, kernel='sigmoid')
-                    #self.model = KMedoids(n_clusters=2)
-                    # self.model = AdaBoostClassifier()
-                    # self.model = MeanShift()
-                    self.model.fit(X_train, y_train)
-                    pickle.dump(self.model, open(model_filename, 'wb'))
-                    preds = self.model.predict(X_test)
-                    probas = self.model.predict_proba(X_test)[:,1]
+                    if self.type_model == 'logisticRegression':
+                        self.model = LogisticRegression(random_state=0)
+                        preds = self.model.predict(X_test)
+                        probas = self.model.predict_proba(X_test)[:,1]
+                    elif(self.type_model == 'lstm'):
+                            self.model = Sequential()
+                            self.model.add(LSTM(5, input_shape=(self.size, self.n_features),return_sequences=True))
+                            self.model.add(LSTM(5, input_shape=(self.size, self.n_features)))
+                            self.model.add(Dense(1))
+                            self.model.add(Activation('sigmoid'))
+                            self.model.compile(loss='binary_crossentropy', optimizer='adam')
+                            self.model.fit(X_train, y_train, validation_data=(X_test, y_test), epochs=100, batch_size=5000, verbose=2)
+                            preds = self.model.predict_classes(X_test)
+                            probas = self.model.predict(X_test)
+                    else:
+                        self.model = RandomForestClassifier()
+                        #self.model = SVC(probability=True, kernel='sigmoid')
+                        #self.model = KMedoids(n_clusters=2)
+                        # self.model = AdaBoostClassifier()
+                        # self.model = MeanShift()
+                        self.model.fit(X_train, y_train)
+                        pickle.dump(self.model, open(model_filename, 'wb'))
+                        preds = self.model.predict(X_test)
+                        probas = self.model.predict_proba(X_test)[:,1]
 
-            acc = accuracy_score(y_test, preds)
-            f1 = metrics.f1_score(y_test, preds)
-            roc = metrics.roc_auc_score(y_test, probas)
+                acc = accuracy_score(y_test, preds)
+                f1 = metrics.f1_score(y_test, preds)
+                try:
+                    roc = metrics.roc_auc_score(y_test, probas)
+                except ValueError:
+                    roc = np.nan
 
-            print('for idx:', idx)
-            print(' acc: {}\n f1 score: {}\n roc_auc score: {}'.format(acc, f1, roc))
-            print('confusion matrix')
-            print(confusion_matrix(y_test, preds))
+                print('for idx:', idx)
+                print(' acc: {}\n f1 score: {}\n roc_auc score: {}'.format(acc, f1, roc))
+                print('confusion matrix')
+                print(confusion_matrix(y_test, preds))
 
-            acc_global += acc
-            f1_global += f1
-            roc_global += roc
+                acc_global += acc
+                f1_global += f1
+                roc_global += roc
 
         acc_global /= n_people
         f1_global /= n_people
