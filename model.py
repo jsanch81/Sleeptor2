@@ -8,18 +8,14 @@ from sklearn.cluster import KMeans, MeanShift
 import pickle
 import numpy as np
 import os
+from utils import normalize
 from keras.models import Sequential
 from keras.layers import Dense, Activation, Reshape, Flatten, Dropout
 from keras.layers import LSTM, ConvLSTM2D, Conv2D
 from keras.regularizers import l2
 from keras.models import load_model
 from keras.optimizers import Adam
-
-def normalize(data):
-    means = np.mean(data, axis=1).reshape(-1,1)
-    stds = np.std(data, axis=1).reshape(-1,1)
-    data_s = (data-means)/stds
-    return data_s
+from outlator import Outlator
 
 
 class Model():
@@ -45,9 +41,16 @@ class Model():
         return X_train, X_test, y_train, y_test
 
     def train(self, X, y):
-        # X = normalize(X)
+        outlator = Outlator()
+        raros = outlator.detect_robust(X)
+        X[raros, :] = np.nan
+        print("raros encontrados:", len(raros))
+
+        X = normalize(X)
+        if(self.type_model == 'lstm'):
+            X = X.reshape(X.shape[0], self.size, self.n_features)
         y = y.ravel()
-        print(len(X))
+        print("tamaño X:", len(X))
 
         n_people = int(len(X)/(2*self.n_samples))
         print("n people:", n_people)
@@ -57,7 +60,24 @@ class Model():
         for idx in range(n_people):
             model_filename = 'data/models/model_' + str(self.n_features) + '_' + str(self.size) + '_' + str(len(X)) + '_'+self.type_model +'_'+ self.mode + '_' + str(idx) + '.pkl'
             X_train, X_test, y_train, y_test = self.balanced_split(X, y, idx)
-            print(X_train.shape)
+            print("antes de raros:", X_train.shape, X_test.shape)
+            
+            # remove nans
+            idxs = []
+            for i in range(len(X_train)):
+                if(not np.isnan(X_train[i,:]).any()):
+                    idxs.append(i)
+            X_train = X_train[idxs]
+            y_train = y_train[idxs]
+
+            idxs = []
+            for i in range(len(X_test)):
+                if(not np.isnan(X_test[i,:]).any()):
+                    idxs.append(i)
+            X_test = X_test[idxs]
+            y_test = y_test[idxs]
+
+            print("luego de raros:", X_train.shape, X_test.shape)
             if(os.path.isfile(model_filename)):
                 self.model = pickle.load(open(model_filename, 'rb'))
                 #self.model.fit(X_train, y_train)
@@ -65,6 +85,8 @@ class Model():
             else:
                 if self.type_model == 'logisticRegression':
                     self.model = LogisticRegression(random_state=0)
+                    preds = self.model.predict(X_test)
+                    probas = self.model.predict_proba(X_test)[:,1]
                 elif(self.type_model == 'lstm'):
                         self.model = Sequential()
                         self.model.add(LSTM(5, input_shape=(self.size, self.n_features),return_sequences=True))
@@ -73,37 +95,37 @@ class Model():
                         self.model.add(Activation('sigmoid'))
                         self.model.compile(loss='binary_crossentropy', optimizer='adam')
                         self.model.fit(X_train, y_train, validation_data=(X_test, y_test), epochs=100, batch_size=5000, verbose=2)
+                        preds = self.model.predict_classes(X_test)
+                        probas = self.model.predict(X_test)
                 else:
-                    #self.model = RandomForestClassifier()
+                    self.model = RandomForestClassifier()
                     #self.model = SVC(probability=True, kernel='sigmoid')
                     #self.model = KMedoids(n_clusters=2)
                     # self.model = AdaBoostClassifier()
-                    self.model = MeanShift()
+                    # self.model = MeanShift()
                     self.model.fit(X_train, y_train)
                     pickle.dump(self.model, open(model_filename, 'wb'))
+                    preds = self.model.predict(X_test)
+                    probas = self.model.predict_proba(X_test)[:,1]
 
-            preds = self.model.predict_classes(X_test)
             acc = accuracy_score(y_test, preds)
-            #probas = self.model.predict_proba(X_test)[:,1]
             f1 = metrics.f1_score(y_test, preds)
-            #roc = metrics.roc_auc_score(y_test, probas)
+            roc = metrics.roc_auc_score(y_test, probas)
 
             print('for idx:', idx)
-            #print(' acc: {}\n f1 score: {}\n roc_auc score: {}'.format(acc, f1, roc))
-            print(' acc: {}\n f1 score: {}'.format(acc, f1))
+            print(' acc: {}\n f1 score: {}\n roc_auc score: {}'.format(acc, f1, roc))
             print('confusion matrix')
             print(confusion_matrix(y_test, preds))
 
             acc_global += acc
             f1_global += f1
-            #roc_global += roc
+            roc_global += roc
 
         acc_global /= n_people
         f1_global /= n_people
-        #roc_global /= n_people
+        roc_global /= n_people
         print('\nglobal:')
-        #print(' acc: {}\n f1 score: {}\n roc_auc score: {}'.format(acc_global, f1_global, roc_global))
-        print(' acc: {}\n f1 score: {}\n'.format(acc_global, f1_global))
+        print(' acc: {}\n f1 score: {}\n roc_auc score: {}'.format(acc_global, f1_global, roc_global))
 
     def train_lstm(self, X, y):
         n_people = int(len(X)/(2*self.n_samples))
