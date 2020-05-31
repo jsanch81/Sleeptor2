@@ -1,11 +1,6 @@
-from sklearn.ensemble import RandomForestClassifier, AdaBoostClassifier
-from sklearn.linear_model import LogisticRegression
-from sklearn.svm import SVC
 from sklearn.metrics import accuracy_score
 from sklearn.metrics import confusion_matrix
 from sklearn import metrics
-from sklearn.cluster import KMeans, MeanShift
-import pickle
 import numpy as np
 import os
 from utils import normalize
@@ -15,7 +10,6 @@ from keras.layers import LSTM, ConvLSTM2D, Conv2D
 from keras.regularizers import l2
 from keras.models import load_model
 from keras.optimizers import Adam
-from outlator import Outlator
 
 
 class Model():
@@ -39,98 +33,6 @@ class Model():
         y_test = y[idxs_test]
 
         return X_train, X_test, y_train, y_test
-
-    def train(self, X, y):
-
-        X = normalize(X)
-        if(self.type_model == 'lstm'):
-            X = X.reshape(X.shape[0], self.size, self.n_features)
-        y = y.ravel()
-        print("tamaño X:", len(X))
-
-        n_test = 2
-        n_people = int(len(X)/(2*self.n_samples))
-        print("n people:", n_people)
-        acc_global = 0
-        f1_global = 0
-        roc_global = 0
-        for idx in range(n_people):
-            model_filename = 'data/models/model_' + str(self.n_features) + '_' + str(self.size) + '_' + str(len(X)) + '_'+self.type_model +'_'+ self.mode + '_' + str(n_test) + '_' + str(idx) + '.pkl'
-            X_train, X_test, y_train, y_test = self.balanced_split(X, y, idx, n_test)
-            print("antes de raros:", X_train.shape, X_test.shape)
-            
-            # remove nans
-            idxs = []
-            for i in range(len(X_train)):
-                if(not np.isnan(X_train[i,:]).any()):
-                    idxs.append(i)
-            X_train = X_train[idxs]
-            y_train = y_train[idxs]
-
-            idxs = []
-            for i in range(len(X_test)):
-                if(not np.isnan(X_test[i,:]).any()):
-                    idxs.append(i)
-            X_test = X_test[idxs]
-            y_test = y_test[idxs]
-
-            print("luego de raros:", X_train.shape, X_test.shape)
-            if(len(X_test)<1):
-                n_people -= 1
-            else:
-                if(os.path.isfile(model_filename)):
-                    self.model = pickle.load(open(model_filename, 'rb'))
-                    preds = self.model.predict(X_test)
-                    probas = self.model.predict_proba(X_test)[:,1]
-                    #self.model.fit(X_train, y_train)
-                    #pickle.dump(self.model, open(model_filename, 'wb'))
-                else:
-                    if self.type_model == 'logisticRegression':
-                        self.model = LogisticRegression(random_state=0)
-                        preds = self.model.predict(X_test)
-                        probas = self.model.predict_proba(X_test)[:,1]
-                    elif(self.type_model == 'lstm'):
-                            self.model = Sequential()
-                            self.model.add(LSTM(5, input_shape=(self.size, self.n_features),return_sequences=True))
-                            self.model.add(LSTM(5, input_shape=(self.size, self.n_features)))
-                            self.model.add(Dense(1))
-                            self.model.add(Activation('sigmoid'))
-                            self.model.compile(loss='binary_crossentropy', optimizer='adam')
-                            self.model.fit(X_train, y_train, validation_data=(X_test, y_test), epochs=100, batch_size=5000, verbose=2)
-                            preds = self.model.predict_classes(X_test)
-                            probas = self.model.predict(X_test)
-                    else:
-                        self.model = RandomForestClassifier()
-                        #self.model = SVC(probability=True, kernel='sigmoid')
-                        #self.model = KMedoids(n_clusters=2)
-                        # self.model = AdaBoostClassifier()
-                        # self.model = MeanShift()
-                        self.model.fit(X_train, y_train)
-                        pickle.dump(self.model, open(model_filename, 'wb'))
-                        preds = self.model.predict(X_test)
-                        probas = self.model.predict_proba(X_test)[:,1]
-
-                acc = accuracy_score(y_test, preds)
-                f1 = metrics.f1_score(y_test, preds)
-                try:
-                    roc = metrics.roc_auc_score(y_test, probas)
-                except ValueError:
-                    roc = np.nan
-
-                print('for idx:', idx)
-                print(' acc: {}\n f1 score: {}\n roc_auc score: {}'.format(acc, f1, roc))
-                print('confusion matrix')
-                print(confusion_matrix(y_test, preds))
-
-                acc_global += acc
-                f1_global += f1
-                roc_global += roc
-
-        acc_global /= n_people
-        f1_global /= n_people
-        roc_global /= n_people
-        print('\nglobal:')
-        print(' acc: {}\n f1 score: {}\n roc_auc score: {}'.format(acc_global, f1_global, roc_global))
 
     def train_lstm(self, X, y):
         n_test = 1
@@ -204,7 +106,11 @@ class Model():
         print("f1 global:",f1_global)
         print("roc global:", roc_global)
 
-        # train final model
+        
+        
+        
+        ############## ************* train final model **************** ################
+
         n_test = 9
         idx = np.random.randint(n_people-n_test)
         batch_size=2

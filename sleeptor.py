@@ -69,41 +69,5 @@ class Sleeptor():
             if k == 27:
                 break
 
-
-        # while True:
-        #     time_elapsed = time.time() - prev
-        #     _, image = cap.read()
-        #     if time_elapsed > 1./self.featurizer.frame_rate:
-        #         prev = time.time()
-        #         gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-        #         rects = self.featurizer.detector(image, 0)
-        #         for (i, rect) in enumerate(rects):
-        #             shape = self.featurizer.predictor(gray, rect)
-        #             shape = face_utils.shape_to_np(shape)
-        #             features, xl, xr = self.featurizer.featurize([shape], [gray])
-        #             ventana.append(features)
-        #             if (len(ventana) == self.featurizer.size):
-        #                 ventana_np = np.array(ventana)
-        #                 if(mode=='medias'):
-        #                     data = np.mean(ventana_np, axis=0)
-        #                 elif(mode=='concat'):
-        #                     data = ventana_np.reshape(1, -1)
-        #                 result_string = self.predict(data)
-        #                 cv2.putText(image,result_string, bottomLeftCornerOfText, font, fontScale, fontColor,lineType)
-        #                 if(xl and (xl < 0.3 or xl > 0.7)):
-        #                     image = self.alerta_1
-        #                 if(xr and (xr < 0.3 or xr > 0.7)):
-        #                     image = self.alerta_1
-        #                 ventana = ventana[self.featurizer.step:]
-
-        #             for (x, y) in shape:
-        #                 cv2.circle(image, (x, y), 2, (0, 255, 0), -1)
-
-        #     cv2.imshow("Monitor", image)
-
-        #     k = cv2.waitKey(300) & 0xFF
-        #     if k == 27:
-        #         break
-
         cv2.destroyAllWindows()
         cap.release()
