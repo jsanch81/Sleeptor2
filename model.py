@@ -27,9 +27,9 @@ class Model():
         self.n_samples = (n_samples - size)/step
         self.type_model = type_model
 
-    def balanced_split(self, X, y, idx):
+    def balanced_split(self, X, y, idx, n):
         idxs_train = set(np.arange(len(X)))
-        idxs_test = set(np.arange(idx*2*self.n_samples, (idx+1)*2*self.n_samples))
+        idxs_test = set(np.arange(idx*2*self.n_samples, (idx+1)*2*n*self.n_samples))
         idxs_train = np.array(list(idxs_train - idxs_test), dtype=np.int32)
         idxs_test = np.array(list(idxs_test), dtype=np.int32)
 
@@ -41,10 +41,6 @@ class Model():
         return X_train, X_test, y_train, y_test
 
     def train(self, X, y):
-        # outlator = Outlator()
-        # raros = outlator.detect_robust(X)
-        # X[raros, :] = np.nan
-        # print("raros encontrados:", len(raros))
 
         X = normalize(X)
         if(self.type_model == 'lstm'):
@@ -52,14 +48,15 @@ class Model():
         y = y.ravel()
         print("tamaño X:", len(X))
 
+        n_test = 2
         n_people = int(len(X)/(2*self.n_samples))
         print("n people:", n_people)
         acc_global = 0
         f1_global = 0
         roc_global = 0
         for idx in range(n_people):
-            model_filename = 'data/models/model_' + str(self.n_features) + '_' + str(self.size) + '_' + str(len(X)) + '_'+self.type_model +'_'+ self.mode + '_' + str(idx) + '.pkl'
-            X_train, X_test, y_train, y_test = self.balanced_split(X, y, idx)
+            model_filename = 'data/models/model_' + str(self.n_features) + '_' + str(self.size) + '_' + str(len(X)) + '_'+self.type_model +'_'+ self.mode + '_' + str(n_test) + '_' + str(idx) + '.pkl'
+            X_train, X_test, y_train, y_test = self.balanced_split(X, y, idx, n_test)
             print("antes de raros:", X_train.shape, X_test.shape)
             
             # remove nans
@@ -136,26 +133,27 @@ class Model():
         print(' acc: {}\n f1 score: {}\n roc_auc score: {}'.format(acc_global, f1_global, roc_global))
 
     def train_lstm(self, X, y):
+        n_test = 2
         n_people = int(len(X)/(2*self.n_samples))
         print("n people:", n_people)
         acc_global = 0
         f1_global = 0
         roc_global = 0
         for idx in range(n_people):
-            model_filename = 'data/models/model_' + str(self.n_features) + '_' + str(self.size) + '_' + str(self.step) + '_' + str(len(X)) + '_'+self.type_model +'_'+ self.mode + '_' + str(idx) + '.h5'
-            X_train, X_test, y_train, y_test = self.balanced_split(X, y, idx)
+            model_filename = 'data/models/model_' + str(self.n_features) + '_' + str(self.size) + '_' + str(self.step) + '_' + str(len(X)) + '_'+self.type_model +'_'+ self.mode + '_' + str(n_test) + '_' + str(idx) + '.h5'
+            X_train, X_test, y_train, y_test = self.balanced_split(X, y, idx, n_test)
             if(os.path.isfile(model_filename)):
-                self.model = load_model(model_filename)
+                model = load_model(model_filename)
             else:
-                self.model = Sequential()
-                self.model.add(ConvLSTM2D(filters=40, kernel_size=(5, 5), strides=(3,3), input_shape=(None, 64, 64, 1), padding='valid', bias_regularizer=l2(1e-3), return_sequences=False, dropout=0.0, kernel_regularizer=l2(1e-3), recurrent_regularizer=l2(1e-3)))
+                model = Sequential()
+                model.add(ConvLSTM2D(filters=40, kernel_size=(5, 5), strides=(3,3), input_shape=(None, 64, 64, 1), padding='valid', bias_regularizer=l2(1e-3), return_sequences=False, dropout=0.0, kernel_regularizer=l2(1e-3), recurrent_regularizer=l2(1e-3)))
                 #self.model.add(Dropout(0.5))
-                self.model.add(Flatten())
-                self.model.add(Dense(1, bias_regularizer=l2(1e-3), kernel_regularizer=l2(1e-3)))
-                self.model.add(Activation('sigmoid'))
+                model.add(Flatten())
+                model.add(Dense(1, bias_regularizer=l2(1e-3), kernel_regularizer=l2(1e-3)))
+                model.add(Activation('sigmoid'))
                 
                 opt = Adam(learning_rate=0.00001)
-                self.model.compile(loss='binary_crossentropy', optimizer=opt)
+                model.compile(loss='binary_crossentropy', optimizer=opt)
                 
                 tmp_x = []
                 tmp_y = []
@@ -173,8 +171,8 @@ class Model():
                         batch_y.append(cy[int(i%self.n_samples)])
                     batch_x = np.array(batch_x)
                     batch_y = np.array(batch_y)
-                    self.model.train_on_batch(batch_x, batch_y)
-                    loss = self.model.test_on_batch(X_test, y_test)
+                    model.train_on_batch(batch_x, batch_y)
+                    loss = model.test_on_batch(X_test, y_test)
                     print(loss)
                     if(loss > loss_m1 and loss_m1>loss_m2):
                         break
@@ -183,12 +181,12 @@ class Model():
                 
                 # self.model.fit(X_train, y_train, validation_data=(X_test, y_test), epochs=5, batch_size=50, verbose=2, steps_per_epoch=10, validation_steps=1)
 
-                self.model.save(model_filename)
+                model.save(model_filename)
 
-            preds = self.model.predict_classes(X_test)
+            preds = model.predict_classes(X_test)
             acc = accuracy_score(y_test, preds)
             f1 = metrics.f1_score(y_test, preds)
-            probas = self.model.predict(X_test)
+            probas = model.predict(X_test)
             roc = metrics.roc_auc_score(y_test, probas)
 
             acc_global += acc
@@ -202,3 +200,52 @@ class Model():
         print("acc global:",acc_global)
         print("f1 global:",f1_global)
         print("roc global:", roc_global)
+
+        # train final model
+        model_filename = 'data/models/model_' + str(self.n_features) + '_' + str(self.size) + '_' + str(self.step) + '_' + str(len(X)) + '_'+self.type_model +'_'+ self.mode + '_' + str(n_test) + '_' + str(idx) + '.h5'
+        X_train, X_test, y_train, y_test = self.balanced_split(X, y, idx, 5)
+        self.model = Sequential()
+        self.model.add(ConvLSTM2D(filters=40, kernel_size=(5, 5), strides=(3,3), input_shape=(None, 64, 64, 1), padding='valid', bias_regularizer=l2(1e-3), return_sequences=False, dropout=0.0, kernel_regularizer=l2(1e-3), recurrent_regularizer=l2(1e-3)))
+        #self.model.add(Dropout(0.5))
+        self.model.add(Flatten())
+        self.model.add(Dense(1, bias_regularizer=l2(1e-3), kernel_regularizer=l2(1e-3)))
+        self.model.add(Activation('sigmoid'))
+        
+        opt = Adam(learning_rate=0.00001)
+        self.model.compile(loss='binary_crossentropy', optimizer=opt)
+        
+        tmp_x = []
+        tmp_y = []
+        for i in range((n_people-1)*2):
+            tmp_x.append(X_train[int(i*self.n_samples):int((i+1)*self.n_samples)])
+            tmp_y.append(y_train[int(i*self.n_samples):int((i+1)*self.n_samples)])
+        loss_m2 = np.inf
+        loss_m1 = np.inf
+        while(True):
+            i = np.random.randint(self.n_samples)
+            batch_x = []
+            batch_y = []
+            for cx, cy in zip(tmp_x, tmp_y):
+                batch_x.append(cx[int(i%self.n_samples)])
+                batch_y.append(cy[int(i%self.n_samples)])
+            batch_x = np.array(batch_x)
+            batch_y = np.array(batch_y)
+            self.model.train_on_batch(batch_x, batch_y)
+            loss = self.model.test_on_batch(X_test, y_test)
+            print(loss)
+            if(loss > loss_m1 and loss_m1>loss_m2):
+                break
+            loss_m2 = loss_m1
+            loss_m1 = loss
+        
+        self.model.save(model_filename)
+        preds = self.model.predict_classes(X_test)
+        acc = accuracy_score(y_test, preds)
+        f1 = metrics.f1_score(y_test, preds)
+        probas = self.model.predict(X_test)
+        roc = metrics.roc_auc_score(y_test, probas)
+
+        print('final model:')
+        print('acc:', acc)
+        print('f1:', f1)
+        print('roc': roc)
