@@ -20,7 +20,7 @@ class Sleeptor():
 
         return result_string
 
-    def live(self, mode):
+    def live(self):
         # opciones de texto de resultado
         font                   = cv2.FONT_HERSHEY_SIMPLEX
         bottomLeftCornerOfText = (10,400)
@@ -50,6 +50,7 @@ class Sleeptor():
                         face = extract_closest_face(rects)
                     gray = gray[max(face.top(),0):max(face.bottom(),0), max(face.left(),0):max(face.right(),0)]
                     gray = cv2.resize(gray, (self.featurizer.height, self.featurizer.width))
+                    gray = (gray-128)/128
                     ventana.append(gray)
 
                     # si se cumple el step

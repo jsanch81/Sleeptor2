@@ -7,3 +7,4 @@ imutils
 scikit-learn
 pandas
 keras
+tensorflow

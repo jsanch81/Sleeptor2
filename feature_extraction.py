@@ -168,7 +168,7 @@ class Featurizer():
                cosines.extend(tmp)
 
             if(grays is not None):
-                # detectar posicion de la pupila
+                # detectar posicion de la pupilafrom keras.models import load_model
                 right_eye_coords = calculate_eye_coords(ls_i, 36,37,38,39,40,41)
                 left_eye_coords = calculate_eye_coords(ls_i, 42,43,44,45,46,47)
 
