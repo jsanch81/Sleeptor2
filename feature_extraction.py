@@ -308,8 +308,8 @@ class Featurizer():
         return ventanas, medias
     
     def extrac_images(self):
-        images_filename =  self.data_dir + 'images_' + str(self.size) + '_' + str(self.step) + '_' + str(self.n_samples_per_video) + '.npy'
-        image_labels_filename = self.data_dir + 'images_labels_' + str(self.size) + '_' + str(self.step) + '_' + str(self.n_samples_per_video) + '.npy'
+        images_filename =  self.data_dir + 'images_normalized_' + str(self.size) + '_' + str(self.step) + '_' + str(self.n_samples_per_video) + '.npy'
+        image_labels_filename = self.data_dir + 'images_labels_normalized_' + str(self.size) + '_' + str(self.step) + '_' + str(self.n_samples_per_video) + '.npy'
 
         if(not os.path.isfile(images_filename)):
             images = None
@@ -319,8 +319,8 @@ class Featurizer():
             for fold in folds:
                 people = [x for x in os.listdir('data/'+fold) if x.isnumeric()]
                 for person in people:
-                    images_p_filename = self.data_dir + fold + '/' + person + '/images_' + str(self.height) + '_' + str(self.width) + '_' + str(self.n_samples_per_video) + '.npy'
-                    image_labels_p_filename = self.data_dir + fold + '/' + person + '/images_labels_' + str(self.height) + '_' + str(self.width) + '_' + str(self.n_samples_per_video) + '.npy'
+                    images_p_filename = self.data_dir + fold + '/' + person + '/images_normalized_' + str(self.height) + '_' + str(self.width) + '_' + str(self.n_samples_per_video) + '.npy'
+                    image_labels_p_filename = self.data_dir + fold + '/' + person + '/images_labels_normalized_' + str(self.height) + '_' + str(self.width) + '_' + str(self.n_samples_per_video) + '.npy'
                     images_p = []
                     labels_p = []
                     if(not os.path.isfile(images_p_filename)):
@@ -346,6 +346,7 @@ class Featurizer():
                                         face = extract_closest_face(rects)
                                     gray = gray[max(face.top(),0):max(face.bottom(),0), max(face.left(),0):max(face.right(),0)]
                                     gray = cv2.resize(gray, (self.height, self.width))
+                                    gray = (gray-128)/128
                                     images_p.append(gray)
                                     count += 1
                                     labels_p.append([float(i)])

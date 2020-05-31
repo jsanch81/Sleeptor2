@@ -141,9 +141,9 @@ class Model():
         roc_global = 0
         
         batch_size=1
-        # for idx in range(n_people):
-        for idx in range(0):
-            model_filename = 'data/models/model_' + str(self.n_features) + '_' + str(self.size) + '_' + str(self.step) + '_' + str(len(X)) + '_'+self.type_model +'_'+ self.mode + '_' + str(n_test) + '_' + str(idx) + '.h5'
+        for idx in range(n_people):
+        # for idx in range(0):
+            model_filename = 'data/models/model_' + str(self.n_features) + '_' + str(self.size) + '_' + str(self.step) + '_' + str(len(X)) + '_'+self.type_model +'_'+ self.mode + '_' + str(n_test) + '_' + str(idx) + '_normalized.h5'
             X_train, X_test, y_train, y_test = self.balanced_split(X, y, idx, n_test)
             if(os.path.isfile(model_filename)):
                 model = load_model(model_filename)
@@ -161,17 +161,17 @@ class Model():
                 tmp_x = []
                 tmp_y = []
                 for i in range((n_people-n_test)*2):
-                    tmp_x.extend(X_train[int(i*self.n_samples):int((i+1)*self.n_samples)])
-                    tmp_y.extend(y_train[int(i*self.n_samples):int((i+1)*self.n_samples)])
+                    tmp_x.append(X_train[int(i*self.n_samples):int((i+1)*self.n_samples)])
+                    tmp_y.append(y_train[int(i*self.n_samples):int((i+1)*self.n_samples)])
                 loss_m2 = np.inf
                 loss_m1 = np.inf
                 while(True):
-                    i = np.random.randint(self.n_samples)
+                    i = np.random.randint(self.n_samples-batch_size)
                     batch_x = []
                     batch_y = []
                     for cx, cy in zip(tmp_x, tmp_y):
-                        batch_x.append(cx[int(i%self.n_samples):int((i+batch_size)%self.n_samples)])
-                        batch_y.append(cy[int(i%self.n_samples):int((i+batch_size)%self.n_samples)])
+                        batch_x.extend(cx[int(i%self.n_samples):int((i+batch_size)%self.n_samples)])
+                        batch_y.extend(cy[int(i%self.n_samples):int((i+batch_size)%self.n_samples)])
                     batch_x = np.array(batch_x)
                     batch_y = np.array(batch_y)
                     model.train_on_batch(batch_x, batch_y)
@@ -208,7 +208,7 @@ class Model():
         n_test = 9
         idx = np.random.randint(n_people-n_test)
         batch_size=2
-        model_filename = 'data/models/model_' + str(self.n_features) + '_' + str(self.size) + '_' + str(self.step) + '_' + str(len(X)) + '_'+self.type_model +'_'+ self.mode + '_' + str(n_test) + '_' + str(idx) + '.h5'
+        model_filename = 'data/models/model_' + str(self.n_features) + '_' + str(self.size) + '_' + str(self.step) + '_' + str(len(X)) + '_'+self.type_model +'_'+ self.mode + '_' + str(n_test) + '_' + str(idx) + '_normalized.h5'
         X_train, X_test, y_train, y_test = self.balanced_split(X, y, idx, n_test)
         self.model = Sequential()
         self.model.add(ConvLSTM2D(filters=40, kernel_size=(5, 5), strides=(3,3), input_shape=(None, 64, 64, 1), padding='valid', bias_regularizer=l2(1e-3), return_sequences=False, dropout=0.0, kernel_regularizer=l2(1e-3), recurrent_regularizer=l2(1e-3)))
