@@ -94,7 +94,7 @@ class Featurizer():
                         images_p = np.load(images_p_filename, allow_pickle=True)
                         labels_p = np.load(image_labels_p_filename, allow_pickle=True)
                         count = len(images_p)
-                    if(count == self.n_samples_per_video):
+                    if(count == self.n_samples_per_video*2):
                         wall = int(len(images_p)/2)
                         images_0 = images_p[:wall]
                         images_1 = images_p[wall:]

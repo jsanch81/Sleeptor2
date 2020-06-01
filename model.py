@@ -13,8 +13,7 @@ from keras.optimizers import Adam
 
 
 class Model():
-    def __init__(self, n_features, mode, size, step, n_samples, type_model):
-        self.n_features = n_features
+    def __init__(self, mode, size, step, n_samples, type_model):
         self.mode = mode
         self.size = size
         self.step = step
@@ -45,7 +44,7 @@ class Model():
         batch_size=1
         for idx in range(n_people):
         # for idx in range(0):
-            model_filename = 'data/models/model_' + str(self.n_features) + '_' + str(self.size) + '_' + str(self.step) + '_' + str(len(X)) + '_'+self.type_model +'_'+ self.mode + '_' + str(n_test) + '_' + str(idx) + '_normalized.h5'
+            model_filename = 'data/models/model_' + str(self.size) + '_' + str(self.step) + '_' + str(len(X)) + '_'+self.type_model +'_'+ self.mode + '_' + str(n_test) + '_' + str(idx) + '_normalized.h5'
             X_train, X_test, y_train, y_test = self.balanced_split(X, y, idx, n_test)
             if(os.path.isfile(model_filename)):
                 model = load_model(model_filename)
@@ -113,8 +112,8 @@ class Model():
 
         n_test = 9
         idx = np.random.randint(n_people-n_test)
-        batch_size=2
-        model_filename = 'data/models/model_' + str(self.n_features) + '_' + str(self.size) + '_' + str(self.step) + '_' + str(len(X)) + '_'+self.type_model +'_'+ self.mode + '_' + str(n_test) + '_' + str(idx) + '_normalized.h5'
+        batch_size=1
+        model_filename = 'data/models/model_' + str(self.size) + '_' + str(self.step) + '_' + str(len(X)) + '_'+self.type_model +'_'+ self.mode + '_' + str(n_test) + '_' + str(idx) + '_normalized.h5'
         X_train, X_test, y_train, y_test = self.balanced_split(X, y, idx, n_test)
         self.model = Sequential()
         self.model.add(ConvLSTM2D(filters=40, kernel_size=(5, 5), strides=(3,3), input_shape=(None, 64, 64, 1), padding='valid', bias_regularizer=l2(1e-3), return_sequences=False, dropout=0.0, kernel_regularizer=l2(1e-3), recurrent_regularizer=l2(1e-3)))
