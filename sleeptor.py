@@ -65,7 +65,7 @@ class Sleeptor():
             cv2.putText(image,result_string, bottomLeftCornerOfText, font, fontScale, fontColor,lineType)
             cv2.imshow("Monitor", image)
 
-            k = cv2.waitKey(300) & 0xFF
+            k = cv2.waitKey(1) & 0xFF
             if k == 27:
                 break
 

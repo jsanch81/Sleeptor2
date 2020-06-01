@@ -43,7 +43,6 @@ class Model():
         
         batch_size=1
         for idx in range(n_people):
-        # for idx in range(0):
             model_filename = 'data/models/model_' + str(self.size) + '_' + str(self.step) + '_' + str(len(X)) + '_'+self.type_model +'_'+ self.mode + '_' + str(n_test) + '_' + str(idx) + '_normalized.h5'
             X_train, X_test, y_train, y_test = self.balanced_split(X, y, idx, n_test)
             if(os.path.isfile(model_filename)):
@@ -51,7 +50,6 @@ class Model():
             else:
                 model = Sequential()
                 model.add(ConvLSTM2D(filters=40, kernel_size=(5, 5), strides=(3,3), input_shape=(None, 64, 64, 1), padding='valid', bias_regularizer=l2(1e-3), return_sequences=False, dropout=0.0, kernel_regularizer=l2(1e-3), recurrent_regularizer=l2(1e-3)))
-                #self.model.add(Dropout(0.5))
                 model.add(Flatten())
                 model.add(Dense(1, bias_regularizer=l2(1e-3), kernel_regularizer=l2(1e-3)))
                 model.add(Activation('sigmoid'))
@@ -83,8 +81,6 @@ class Model():
                     loss_m2 = loss_m1
                     loss_m1 = loss
                 
-                # self.model.fit(X_train, y_train, validation_data=(X_test, y_test), epochs=5, batch_size=50, verbose=2, steps_per_epoch=10, validation_steps=1)
-
                 model.save(model_filename)
 
             preds = model.predict_classes(X_test)
@@ -117,7 +113,6 @@ class Model():
         X_train, X_test, y_train, y_test = self.balanced_split(X, y, idx, n_test)
         self.model = Sequential()
         self.model.add(ConvLSTM2D(filters=40, kernel_size=(5, 5), strides=(3,3), input_shape=(None, 64, 64, 1), padding='valid', bias_regularizer=l2(1e-3), return_sequences=False, dropout=0.0, kernel_regularizer=l2(1e-3), recurrent_regularizer=l2(1e-3)))
-        #self.model.add(Dropout(0.5))
         self.model.add(Flatten())
         self.model.add(Dense(1, bias_regularizer=l2(1e-3), kernel_regularizer=l2(1e-3)))
         self.model.add(Activation('sigmoid'))
