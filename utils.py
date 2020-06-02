@@ -24,7 +24,7 @@ def extract_closest_face(faces):
     areas = []
     for f in faces:
         areas.append(f.height() * f.width())
-    
+
     idx = np.argmax(areas)
     return faces[idx]
 
@@ -33,3 +33,10 @@ def normalize(data):
     stds = np.nanstd(data, axis=1).reshape(-1,1)
     data_s = (data-means)/stds
     return data_s
+    
+def eye_aspect_ratio(eye):
+    A = np.linalg.norm((eye[1] - eye[5]),2)
+    B = np.linalg.norm((eye[2] - eye[4]),2)
+    C = np.linalg.norm((eye[0] - eye[3]),2)
+    ear = (A + B) / (2.0 * C)
+    return ear
