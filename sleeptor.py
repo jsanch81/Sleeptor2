@@ -72,7 +72,7 @@ class Sleeptor():
                 if(len(self.pestaneos) > 5):
                     image = self.alerta_2
                     print('\a')
-        return image;
+        return image
 
     def live(self):
         # opciones de texto de resultado
@@ -105,6 +105,7 @@ class Sleeptor():
                     shape = self.predictor(gray, face)
                     shape = face_utils.shape_to_np(shape)
                     alert = self.blinks(shape)
+                    
                     gray = gray[max(face.top(),0):max(face.bottom(),0), max(face.left(),0):max(face.right(),0)]
                     gray = cv2.resize(gray, (self.featurizer.height, self.featurizer.width))
                     gray = (gray-128)/128
@@ -118,10 +119,11 @@ class Sleeptor():
                     tl = face.tl_corner()
                     br = face.br_corner()
                     cv2.rectangle(image, (tl.x,tl.y), (br.x,br.y), (0,255,0))
-
-            cv2.putText(image, result_string, bottomLeftCornerOfText, font, fontScale, fontColor,lineType)
+            if(alert is None):
+                cv2.putText(image, result_string, bottomLeftCornerOfText, font, fontScale, fontColor,lineType)
+            else:
+                image = alert
             cv2.imshow("Monitor", image)
-
             k = cv2.waitKey(1) & 0xFF
             if k == 27:
                 break
